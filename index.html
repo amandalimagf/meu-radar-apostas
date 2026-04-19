@@ -81,51 +81,39 @@
             const ligaId = document.getElementById('filtroLiga').value;
             
             btn.disabled = true;
-            btn.innerText = 'Forçando Busca Real...';
+            btn.innerText = 'Consultando API...';
             divResultados.innerHTML = '';
 
             try {
-                // BUG FIX 1: Data corrigida para fuso Brasil
+                // Pega a data local correta YYYY-MM-DD
                 const hoje = new Date().toLocaleDateString('en-CA'); 
                 
-                // BUG FIX 2: Se for Brasil, vamos buscar pela liga 71, 
-                // mas sem travar a temporada (Season), deixando a API decidir a atual
-                const url = `https://v3.football.api-sports.io/fixtures?date=${hoje}&league=${ligaId}`;
-                
-                const response = await fetch(url, {
+                // Chamada simplificada SEM o header 'x-apisports-host' que causa o erro CORS
+                const response = await fetch(`https://v3.football.api-sports.io/fixtures?date=${hoje}&league=${ligaId}`, {
                     method: 'GET',
                     headers: { 
-                        'x-apisports-key': API_FOOTBALL_KEY,
-                        'x-apisports-host': 'v3.football.api-sports.io'
+                        'x-apisports-key': API_FOOTBALL_KEY 
                     }
                 });
                 
                 const data = await response.json();
+
+                // Verifica se a API retornou erro de limite ou chave
+                if (data.errors && Object.keys(data.errors).length > 0) {
+                    divResultados.innerHTML = `<p style="color:var(--orange); text-align:center; padding:20px;">Erro da API: ${JSON.stringify(data.errors)}</p>`;
+                    return;
+                }
+
                 const jogos = data.response;
 
                 if (!jogos || jogos.length === 0) {
-                    // SE NÃO ACHOU POR ID, TENTAMOS BUSCA GERAL DO DIA (Backup)
-                    const resGeral = await fetch(`https://v3.football.api-sports.io/fixtures?date=${hoje}`, {
-                        headers: { 'x-apisports-key': API_FOOTBALL_KEY }
-                    });
-                    const dataGeral = await resGeral.json();
-                    
-                    // Filtra qualquer jogo que tenha "Serie A" ou "Brazil" no nome
-                    const backup = dataGeral.response.filter(j => 
-                        j.league.country === 'Brazil' || 
-                        j.league.name.includes('Serie A')
-                    );
-
-                    if (backup.length > 0) {
-                        backup.forEach(jogo => renderizarCardInicial(jogo));
-                    } else {
-                        divResultados.innerHTML = `<p style="text-align:center;">Nenhum jogo do Brasileirão detectado hoje (${hoje}) pela API.</p>`;
-                    }
+                    divResultados.innerHTML = `<p style="text-align:center; padding: 20px; background: #252525; border-radius: 8px;">Nenhum jogo encontrado para hoje (${hoje}) nesta liga.</p>`;
                 } else {
                     jogos.forEach(jogo => renderizarCardInicial(jogo));
                 }
             } catch (error) {
-                divResultados.innerHTML = `<p style="color:red; text-align:center;">Erro de Segurança: Você precisa rodar este arquivo em um servidor (Vercel ou Live Server).</p>`;
+                divResultados.innerHTML = `<p style="color:red; text-align:center; padding:20px;">Falha na conexão: Verifique sua internet ou chave API.</p>`;
+                console.error("Erro detalhado:", error);
             } finally {
                 btn.disabled = false;
                 btn.innerText = 'Escanear Novamente';
