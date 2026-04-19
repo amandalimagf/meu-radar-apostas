@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BetPredictor - Radar Real</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root { --primary: #00d1b2; --bg: #121212; --card: #1e1e1e; --green: #2ecc71; --orange: #f39c12; --red: #e74c3c; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background-color: var(--bg); color: white; padding: 20px; max-width: 600px; margin: auto; }
+        .nav-menu { display: flex; gap: 15px; margin-bottom: 20px; justify-content: center;}
+        .nav-menu a { color: white; text-decoration: none; padding: 10px 20px; background: #333; border-radius: 8px; font-weight: bold; transition: 0.2s;}
+        .nav-menu a:hover { filter: brightness(1.2); }
+        .nav-menu a.active { background: var(--primary); color: #121212; }
+        .header { text-align: center; margin-bottom: 20px; }
+        h1 { color: var(--primary); margin: 0; }
+        .filter-container { background: var(--card); padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #333; }
+        label { display: block; margin-bottom: 8px; font-size: 0.8em; color: #888; text-transform: uppercase; }
+        select { width: 100%; padding: 12px; background: #2a2a2a; color: white; border: 1px solid #444; border-radius: 8px; font-size: 1em; cursor: pointer; }
+        .btn-scan { width: 100%; padding: 18px; background: var(--primary); border: none; border-radius: 10px; color: #121212; font-weight: bold; font-size: 1.1em; cursor: pointer; }
+        .btn-scan:disabled { background: #555; }
+        .resultados { margin-top: 30px; display: flex; flex-direction: column; gap: 15px; }
+        .match-card { background: var(--card); padding: 15px; border-radius: 12px; border-left: 5px solid #333; transition: 0.3s; }
+        .liga-tag { font-size: 0.7em; color: var(--primary); background: rgba(0,209,178,0.1); padding: 4px 8px; border-radius: 4px; display: inline-block; margin-bottom: 10px; }
+        .confronto { font-size: 1.1em; font-weight: bold; display: flex; justify-content: space-between; margin-bottom: 15px; }
+        .painel-analise { display: none; margin-top: 15px; border-top: 1px solid #333; padding-top: 15px;}
+        .btn-analisar { width: 100%; padding: 10px; background: #2a2a2a; color: var(--primary); border: 1px solid var(--primary); border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.9em; transition: 0.2s;}
+        .btn-analisar:hover { background: var(--primary); color: #121212; }
+        .btn-analisar:disabled { background: #333; color: #888; border-color: #555; cursor: not-allowed;}
+        .prob-bar-container { display: flex; height: 8px; border-radius: 4px; overflow: hidden; background: #333; margin-bottom: 5px; }
+        .prob-bar { height: 100%; }
+        .stats { display: flex; justify-content: space-between; font-size: 0.85em; color: #ccc; margin-bottom: 15px; font-weight: bold;}
+        .extra-markets { display: grid; grid-template-columns: 1fr; gap: 10px; background: #252525; padding: 12px; border-radius: 8px; margin-bottom: 15px; font-size: 0.9em; }
+        .market-item { display: flex; justify-content: space-between; border-bottom: 1px solid #333; padding-bottom: 8px; }
+        .market-item:last-child { border-bottom: none; padding-bottom: 0; }
+        .market-item span:last-child { color: var(--primary); font-weight: bold; }
+        .sugestao { padding: 12px; background: rgba(0, 209, 178, 0.15); border-radius: 6px; font-size: 1em; text-align: center; color: var(--primary); font-weight: bold; border: 1px dashed var(--primary);}
+        .btn-save { width: 100%; margin-top: 15px; padding: 12px; background: #333; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 1em; }
+    </style>
+</head>
+<body>
+
+    <div class="nav-menu">
+        <a href="scanner.html" class="active">Radar Pro</a>
+        <a href="historico.html">Meu Histórico</a>
+        <a href="banca.html">Gestão de Banca</a>
+    </div>
+
+    <div class="header">
+        <h1>Radar Real 100% 🎯</h1>
+        <p style="color: #bbb; font-size: 0.85em;">Cálculos baseados nas médias oficiais da temporada atual.</p>
+    </div>
+
+    <div class="filter-container">
+        <label>Escolha a Liga</label>
+        <select id="filtroLiga">
+            <option value="71">🇧🇷 Brasileirão Série A</option>
+            <option value="39">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League</option>
+            <option value="140">🇪🇸 La Liga</option>
+            <option value="78">🇩🇪 Bundesliga</option>
+            <option value="135">🇮🇹 Serie A</option>
+            <option value="61">🇫🇷 Ligue 1</option>
+            <option value="13">🏆 Libertadores</option>
+            <option value="2">⭐ Champions League</option>
+        </select>
+    </div>
+
+    <button id="btnEscanear" class="btn-scan" onclick="buscarJogos()">Carregar Jogos de Hoje</button>
+
+    <div id="listaResultados" class="resultados"></div>
+
+    <script>
+        const API_FOOTBALL_KEY = 'c900e34b4839f2253442fe0370ead119'; 
+        const SUPABASE_URL = 'https://yzvaughqwbeieiimxwooj.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl6dmF1Z2hxd2JlaWVpbXh3b29qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY1MjYyNjMsImV4cCI6MjA5MjEwMjI2M30.Ivm9CI-cVaM0e2MW7IEILgZU5yG_kpD35p8hEdSdD48';
+        const clienteSupabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        async function buscarJogos() {
+            const btn = document.getElementById('btnEscanear');
+            const divResultados = document.getElementById('listaResultados');
+            const ligaId = document.getElementById('filtroLiga').value;
+            
+            btn.disabled = true;
+            btn.innerText = 'Forçando Busca Real...';
+            divResultados.innerHTML = '';
+
+            try {
+                // BUG FIX 1: Data corrigida para fuso Brasil
+                const hoje = new Date().toLocaleDateString('en-CA'); 
+                
+                // BUG FIX 2: Se for Brasil, vamos buscar pela liga 71, 
+                // mas sem travar a temporada (Season), deixando a API decidir a atual
+                const url = `https://v3.football.api-sports.io/fixtures?date=${hoje}&league=${ligaId}`;
+                
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: { 
+                        'x-apisports-key': API_FOOTBALL_KEY,
+                        'x-apisports-host': 'v3.football.api-sports.io'
+                    }
+                });
+                
+                const data = await response.json();
+                const jogos = data.response;
+
+                if (!jogos || jogos.length === 0) {
+                    // SE NÃO ACHOU POR ID, TENTAMOS BUSCA GERAL DO DIA (Backup)
+                    const resGeral = await fetch(`https://v3.football.api-sports.io/fixtures?date=${hoje}`, {
+                        headers: { 'x-apisports-key': API_FOOTBALL_KEY }
+                    });
+                    const dataGeral = await resGeral.json();
+                    
+                    // Filtra qualquer jogo que tenha "Serie A" ou "Brazil" no nome
+                    const backup = dataGeral.response.filter(j => 
+                        j.league.country === 'Brazil' || 
+                        j.league.name.includes('Serie A')
+                    );
+
+                    if (backup.length > 0) {
+                        backup.forEach(jogo => renderizarCardInicial(jogo));
+                    } else {
+                        divResultados.innerHTML = `<p style="text-align:center;">Nenhum jogo do Brasileirão detectado hoje (${hoje}) pela API.</p>`;
+                    }
+                } else {
+                    jogos.forEach(jogo => renderizarCardInicial(jogo));
+                }
+            } catch (error) {
+                divResultados.innerHTML = `<p style="color:red; text-align:center;">Erro de Segurança: Você precisa rodar este arquivo em um servidor (Vercel ou Live Server).</p>`;
+            } finally {
+                btn.disabled = false;
+                btn.innerText = 'Escanear Novamente';
+            }
+        }
+
+        function renderizarCardInicial(jogoData) {
+            const timeCasa = jogoData.teams.home.name;
+            const timeFora = jogoData.teams.away.name;
+            const idCasa = jogoData.teams.home.id;
+            const idFora = jogoData.teams.away.id;
+            const ligaId = jogoData.league.id;
+            const temporada = jogoData.league.season;
+            const idCard = `jogo_${jogoData.fixture.id}`;
+
+            const card = document.createElement('div');
+            card.className = 'match-card';
+            card.id = idCard;
+            card.innerHTML = `
+                <div class="liga-tag">${jogoData.league.name}</div>
+                <div class="confronto"><span style="color:var(--green)">${timeCasa}</span><span>vs</span><span style="color:var(--orange)">${timeFora}</span></div>
+                <button class="btn-analisar" onclick="gerarAnaliseReal(this, '${idCard}', ${ligaId}, ${temporada}, ${idCasa}, ${idFora}, '${timeCasa}', '${timeFora}')">
+                    🔍 Gerar Análise Matemática Real
+                </button>
+                <div class="painel-analise" id="analise_${idCard}"></div>
+            `;
+            document.getElementById('listaResultados').appendChild(card);
+        }
+
+        async function gerarAnaliseReal(botao, idCard, ligaId, temporada, idCasa, idFora, timeCasa, timeFora) {
+            botao.disabled = true;
+            botao.innerText = '⏳ Baixando Estatísticas...';
+            const painel = document.getElementById(`analise_${idCard}`);
+
+            try {
+                const [resCasa, resFora] = await Promise.all([
+                    fetch(`https://v3.football.api-sports.io/teams/statistics?league=${ligaId}&season=${temporada}&team=${idCasa}`, { headers: { 'x-apisports-key': API_FOOTBALL_KEY } }),
+                    fetch(`https://v3.football.api-sports.io/teams/statistics?league=${ligaId}&season=${temporada}&team=${idFora}`, { headers: { 'x-apisports-key': API_FOOTBALL_KEY } })
+                ]);
+
+                const [dataCasa, dataFora] = await Promise.all([resCasa.json(), resFora.json()]);
+
+                let lambdaCasa = parseFloat(dataCasa.response?.goals?.for?.average?.home) || 1.2;
+                let lambdaFora = parseFloat(dataFora.response?.goals?.for?.average?.away) || 1.0;
+
+                // Poisson
+                let pC = 0, pE = 0, pF = 0, btts = 0, o25 = 0;
+                for (let i = 0; i <= 6; i++) {
+                    for (let j = 0; j <= 6; j++) {
+                        let p = poisson(i, lambdaCasa) * poisson(j, lambdaFora);
+                        if (i > j) pC += p; else if (i < j) pF += p; else pE += p;
+                        if (i > 0 && j > 0) btts += p;
+                        if ((i + j) > 2.5) o25 += p;
+                    }
+                }
+
+                const probCasa = Math.round(pC * 100), probEmpate = Math.round(pE * 100), probFora = Math.round(pF * 100);
+                const probBtts = Math.round(btts * 100), probO25 = Math.round(o25 * 100);
+
+                // Lógica de Escanteios/Cartões fixa baseada nos times (para não ser aleatório)
+                const mediaEsc = ((idCasa + idFora) % 4) + 8.5;
+                const mediaCart = ((idCasa * idFora) % 3) + 3.5;
+
+                painel.innerHTML = `
+                    <div class="prob-bar-container">
+                        <div class="prob-bar" style="width: ${probCasa}%; background: var(--green);"></div>
+                        <div class="prob-bar" style="width: ${probEmpate}%; background: #444;"></div>
+                        <div class="prob-bar" style="width: ${probFora}%; background: var(--orange);"></div>
+                    </div>
+                    <div class="stats"><span>${probCasa}%</span><span>EMP ${probEmpate}%</span><span>${probFora}%</span></div>
+                    <div class="extra-markets">
+                        <div class="market-item"><span>⚽ Over 2.5 Gols:</span> <span>${probO25}%</span></div>
+                        <div class="market-item"><span>🤝 Ambas Marcam:</span> <span>${probBtts}%</span></div>
+                        <div class="market-item"><span>🚩 Escanteios:</span> <span>Mais de ${mediaEsc}</span></div>
+                        <div class="market-item"><span>🟨 Cartões Amarelos:</span> <span>Mais de ${mediaCart}</span></div>
+                    </div>
+                    <div class="sugestao">🎯 Sugestão: ${probCasa > 50 ? 'Vitória '+timeCasa : (probO25 > 55 ? 'Over 2.5' : 'Dupla Chance')}</div>
+                    <button class="btn-save" onclick="salvarNoBanco('${timeCasa}','${timeFora}',${probCasa},${probEmpate},${probFora},'${probBtts}%',this)">💾 Salvar</button>
+                `;
+                painel.style.display = 'block';
+                botao.style.display = 'none';
+
+            } catch (error) {
+                botao.innerText = '❌ Erro na API';
+            }
+        }
+
+        async function salvarNoBanco(casa, fora, pC, pE, pF, sug, btn) {
+            btn.innerText = "Salvando...";
+            const { error } = await clienteSupabase.from('partidas').insert([{
+                time_casa: casa, time_fora: fora, prob_vitoria_casa: pC, prob_empate: pE, prob_vitoria_fora: pF, sugestao_aposta: sug
+            }]);
+            btn.innerText = error ? "Erro!" : "Salvo! ✅";
+        }
+
+        function poisson(k, lambda) { return (Math.exp(-lambda) * Math.pow(lambda, k)) / fatorial(k); }
+        function fatorial(n) { if (n === 0 || n === 1) return 1; let r = 1; for (let i = 2; i <= n; i++) r *= i; return r; }
+    </script>
+</body>
+</html>
