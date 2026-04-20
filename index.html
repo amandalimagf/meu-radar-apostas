@@ -104,9 +104,17 @@
             divResultados.innerHTML = '';
 
             try {
-                const hoje = new Date().toLocaleDateString('en-CA'); 
+                // Pega a data de hoje
+                const dataHoje = new Date();
+                const hoje = dataHoje.toLocaleDateString('en-CA'); 
                 
-                const res = await fetch(`${BASE_URL}/matches?competitions=${ligaId}&dateFrom=${hoje}&dateTo=${hoje}`, {
+                // Calcula a data de daqui a 3 dias para a janela de busca
+                const dataFim = new Date(dataHoje);
+                dataFim.setDate(dataFim.getDate() + 3);
+                const futuro = dataFim.toLocaleDateString('en-CA');
+                
+                // Busca os jogos na janela de 3 dias
+                const res = await fetch(`${BASE_URL}/matches?competitions=${ligaId}&dateFrom=${hoje}&dateTo=${futuro}`, {
                     method: 'GET',
                     headers: { 'X-Auth-Token': API_KEY }
                 });
@@ -121,7 +129,7 @@
                 const jogos = data.matches;
 
                 if (!jogos || jogos.length === 0) {
-                    divResultados.innerHTML = `<p style="text-align:center; padding: 20px; background: #252525; border-radius: 8px;">Nenhum jogo agendado nesta liga para hoje.</p>`;
+                    divResultados.innerHTML = `<p style="text-align:center; padding: 20px; background: #252525; border-radius: 8px;">Nenhum jogo agendado nesta liga para os próximos 3 dias.</p>`;
                 } else {
                     jogos.forEach(jogo => renderizarCard(jogo, ligaId));
                 }
