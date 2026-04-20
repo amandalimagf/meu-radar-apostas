@@ -147,7 +147,16 @@
             const timeFora = jogo.awayTeam.shortName || jogo.awayTeam.name;
             const idCasa = jogo.homeTeam.id;
             const idFora = jogo.awayTeam.id;
-            const status = jogo.status === 'IN_PLAY' ? '🔴 AO VIVO' : new Date(jogo.utcDate).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
+            
+            // 1. Tratamento completo de Data e Hora
+            const dataJogo = new Date(jogo.utcDate);
+            const diaMes = dataJogo.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+            const hora = dataJogo.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+            
+            let infoTempo = `${diaMes} às ${hora}`;
+            if (jogo.status === 'IN_PLAY') infoTempo = '🔴 AO VIVO';
+            if (jogo.status === 'FINISHED') infoTempo = `Encerrado (${diaMes})`;
+            if (jogo.status === 'PAUSED') infoTempo = '⏸️ INTERVALO';
             
             const idCard = `jogo_${jogo.id}`;
             const card = document.createElement('div');
@@ -155,7 +164,7 @@
             card.id = idCard;
             
             card.innerHTML = `
-                <div class="liga-tag">${jogo.competition.name} • ${status}</div>
+                <div class="liga-tag">${jogo.competition.name} • 🗓️ ${infoTempo}</div>
                 <div class="confronto">
                     <span class="time" style="color:var(--green)">${timeCasa}</span>
                     <span style="color:#666; font-size: 0.8em; padding: 0 10px;">X</span>
