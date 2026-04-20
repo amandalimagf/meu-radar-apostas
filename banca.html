@@ -3,40 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BetPredictor - Gestão de Banca</title>
+    <title>Radar Pro - Gestão de Banca</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        :root { --primary: #00d1b2; --bg: #121212; --card: #1e1e1e; --green: #2ecc71; --red: #e74c3c; }
-        body { font-family: 'Segoe UI', Tahoma, sans-serif; background-color: var(--bg); color: white; padding: 20px; max-width: 900px; margin: auto; }
+        :root { --primary: #00d1b2; --bg: #121212; --card: #1e1e1e; --green: #2ecc71; --orange: #f39c12; --red: #e74c3c; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background-color: var(--bg); color: white; padding: 15px; max-width: 600px; margin: auto; }
         
-        .nav-menu { display: flex; gap: 15px; margin-bottom: 20px; justify-content: center;}
-        .nav-menu a { color: white; text-decoration: none; padding: 10px 20px; background: #333; border-radius: 8px; font-weight: bold; transition: 0.2s; }
-        .nav-menu a:hover { filter: brightness(1.2); }
+        .nav-menu { display: flex; gap: 10px; margin-bottom: 20px; overflow-x: auto; padding-bottom: 10px; }
+        .nav-menu a { color: white; text-decoration: none; padding: 10px 15px; background: #333; border-radius: 8px; font-weight: bold; white-space: nowrap; transition: 0.2s; }
         .nav-menu a.active { background: var(--primary); color: #121212; }
 
         .header { text-align: center; margin-bottom: 20px; }
-        h1 { color: var(--primary); margin: 0; }
+        h1 { color: var(--primary); margin: 0; font-size: 1.8em; }
 
-        .dashboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
-        .stat-card { background: var(--card); padding: 20px; border-radius: 12px; text-align: center; border: 1px solid #333; }
-        .stat-card h3 { margin: 0; font-size: 0.85em; color: #888; text-transform: uppercase; }
-        .stat-card p { margin: 10px 0 0 0; font-size: 1.8em; font-weight: bold; }
+        .dashboard { display: grid; grid-template-columns: 1fr; gap: 15px; margin-bottom: 25px; }
+        .dash-card { background: var(--card); padding: 20px; border-radius: 12px; text-align: center; border: 1px solid #333; }
+        .dash-card h3 { margin: 0 0 10px 0; color: #aaa; font-size: 0.9em; text-transform: uppercase; }
+        .dash-card .valor { font-size: 2em; font-weight: bold; color: var(--primary); }
+        
+        .btn-config { background: #333; color: white; border: none; padding: 8px 15px; border-radius: 6px; margin-top: 10px; cursor: pointer; }
 
-        .table-container { background: var(--card); border-radius: 12px; overflow-x: auto; border: 1px solid #333; }
-        table { width: 100%; border-collapse: collapse; text-align: left; min-width: 700px; }
-        th { background: #252525; padding: 15px; font-size: 0.9em; color: #888; text-transform: uppercase; }
-        td { padding: 15px; border-bottom: 1px solid #333; vertical-align: middle; }
+        h2 { font-size: 1.2em; border-bottom: 1px solid #333; padding-bottom: 10px; margin-bottom: 15px; }
+
+        .aposta-card { background: var(--card); padding: 15px; border-radius: 12px; margin-bottom: 15px; border-left: 4px solid var(--orange); }
+        .confronto { font-weight: bold; font-size: 1.1em; margin-bottom: 5px; }
+        .sugestao-txt { color: #aaa; font-size: 0.85em; margin-bottom: 15px; }
+
+        .inputs-aposta { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+        .inputs-aposta div { display: flex; flex-direction: column; gap: 5px; }
+        label { font-size: 0.8em; color: #888; text-transform: uppercase; font-weight: bold;}
+        input { padding: 10px; border-radius: 6px; border: 1px solid #444; background: #2a2a2a; color: white; font-weight: bold;}
+
+        .action-buttons { display: flex; gap: 10px; }
+        .btn-green { flex: 1; background: rgba(46, 204, 113, 0.2); color: var(--green); border: 1px solid var(--green); padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s;}
+        .btn-green:hover { background: var(--green); color: #121212; }
         
-        .pos { color: var(--green); font-weight: bold;}
-        .neg { color: var(--red); font-weight: bold;}
-        
-        /* Estilos dos Inputs */
-        .input-money { width: 80px; padding: 8px; border-radius: 6px; border: 1px solid #444; background: #121212; color: white; text-align: center; }
-        .input-odd { width: 60px; padding: 8px; border-radius: 6px; border: 1px solid #444; background: #121212; color: white; text-align: center; }
-        
-        .btn-update { padding: 8px 12px; background: var(--primary); color: #121212; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.85em; transition: 0.2s; }
-        .btn-update:hover { filter: brightness(1.1); }
-        .btn-update:disabled { background: #555; cursor: not-allowed; }
+        .btn-red { flex: 1; background: rgba(231, 76, 60, 0.2); color: var(--red); border: 1px solid var(--red); padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s;}
+        .btn-red:hover { background: var(--red); color: white; }
     </style>
 </head>
 <body>
@@ -48,161 +51,140 @@
     </div>
 
     <div class="header">
-        <h1>Painel Financeiro 💰</h1>
-        <p style="color: #bbb; font-size: 0.9em;">Acompanhe o retorno real das suas análises.</p>
+        <h1>Financeiro 📊</h1>
     </div>
 
     <div class="dashboard">
-        <div class="stat-card">
-            <h3>Banca Atual</h3>
-            <p id="currentBank">R$ 0,00</p>
-        </div>
-        <div class="stat-card">
-            <h3>Lucro / Prejuízo</h3>
-            <p id="totalProfit">R$ 0,00</p>
-        </div>
-        <div class="stat-card">
-            <h3>ROI (Retorno)</h3>
-            <p id="totalROI">0%</p>
+        <div class="dash-card">
+            <h3>Saldo Atual da Banca</h3>
+            <div class="valor" id="saldoDisplay">R$ 0,00</div>
+            <button class="btn-config" onclick="configurarBanca()">Atualizar Saldo Inicial</button>
         </div>
     </div>
 
-    <div class="table-container">
-        <table>
-            <thead>
-                <tr>
-                    <th>Confronto</th>
-                    <th>Status</th>
-                    <th>Valor Apostado (R$)</th>
-                    <th>Odd Paga</th>
-                    <th>Lucro Líquido</th>
-                    <th>Ação</th>
-                </tr>
-            </thead>
-            <tbody id="bankTable">
-                <tr><td colspan="6" style="text-align: center;">Carregando dados financeiros...</td></tr>
-            </tbody>
-        </table>
+    <h2>Apostas Pendentes (Para dar Baixa)</h2>
+    <div id="listaPendentes">
+        <p style="text-align: center; color: #888;">Carregando apostas do radar...</p>
     </div>
 
     <script>
-        // --- CONFIGURAÇÕES ---
+        // SUAS CHAVES NOVAS DO SUPABASE
         const SUPABASE_URL = 'https://tvdwgfytguwlsppvjvkk.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR2ZHdnZnl0Z3V3bHNwcHZqdmtrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY1Njk0OTEsImV4cCI6MjA5MjE0NTQ5MX0.mKbLRjWV3eoeAxUtMX-yY24hZQ-mN0aEtnhxk2pH5Us';
         const clienteSupabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // --- CARREGAR DADOS ---
-        async function carregarDadosFinanceiros() {
-            // Busca apenas os jogos que já não estão mais pendentes
-            const { data, error } = await supabase
+        // 1. CARREGAR SALDO LOCAL
+        let saldoAtual = parseFloat(localStorage.getItem('minhaBanca')) || 0;
+        atualizarTelaSaldo();
+
+        function configurarBanca() {
+            let novoValor = prompt("Qual o valor atual da sua banca? (Ex: 1000.50)", saldoAtual);
+            if (novoValor !== null && !isNaN(novoValor)) {
+                saldoAtual = parseFloat(novoValor);
+                localStorage.setItem('minhaBanca', saldoAtual);
+                atualizarTelaSaldo();
+            }
+        }
+
+        function atualizarTelaSaldo() {
+            document.getElementById('saldoDisplay').innerText = `R$ ${saldoAtual.toFixed(2).replace('.', ',')}`;
+        }
+
+        // 2. BUSCAR APOSTAS PENDENTES NO SUPABASE
+        async function carregarPendentes() {
+            const divLista = document.getElementById('listaPendentes');
+            
+            // Busca os jogos que AINDA NÃO TEM resultado preenchido
+            const { data, error } = await clienteSupabase
                 .from('partidas')
                 .select('*')
-                .neq('status', 'Pendente')
-                .order('data_jogo', { ascending: false });
-            
+                .is('resultado', null)
+                .order('id', { ascending: false });
+
             if (error) {
-                document.getElementById('bankTable').innerHTML = `<tr><td colspan="6" class="neg">Erro ao carregar os dados.</td></tr>`;
+                divLista.innerHTML = `<p style="color:red; text-align:center;">Erro ao conectar com o banco.</p>`;
                 return;
             }
 
-            let totalProfit = 0;
-            let totalInvested = 0;
-            const tableBody = document.getElementById('bankTable');
-            tableBody.innerHTML = '';
-
-            if (data.length === 0) {
-                tableBody.innerHTML = `<tr><td colspan="6" style="text-align: center;">Você ainda não marcou nenhum Green ou Red no Histórico.</td></tr>`;
-                atualizarPainel(0, 0);
+            if (!data || data.length === 0) {
+                divLista.innerHTML = `<p style="text-align:center; padding: 20px; background:var(--card); border-radius:8px;">Nenhuma aposta pendente. Vá ao Radar para buscar mais jogos!</p>`;
                 return;
             }
 
-            // --- MONTAR A TABELA ---
-            data.forEach(item => {
-                // Se o valor estiver vazio no banco, deixa 0
-                const aposta = item.valor_aposta || 0; 
-                const odd = item.odd_final || 0;
-                let lucroLiq = 0;
-
-                // Lógica Financeira Real
-                if (aposta > 0 && odd > 0) {
-                    if (item.status === 'Green') {
-                        lucroLiq = (aposta * odd) - aposta; // Se ganhou, ganha o lucro limpo
-                    } else if (item.status === 'Red') {
-                        lucroLiq = -aposta; // Se perdeu, perde a aposta inteira
-                    }
-                    totalProfit += lucroLiq;
-                    totalInvested += aposta;
-                }
-
-                const textoLucro = lucroLiq >= 0 ? `+ R$ ${lucroLiq.toFixed(2)}` : `- R$ ${Math.abs(lucroLiq).toFixed(2)}`;
-                const classeLucro = lucroLiq >= 0 ? 'pos' : 'neg';
-                const statusColor = item.status === 'Green' ? 'pos' : 'neg';
-
-                tableBody.innerHTML += `
-                    <tr>
-                        <td style="font-size: 0.9em; font-weight: bold;">${item.time_casa} x ${item.time_fora}</td>
-                        <td class="${statusColor}">${item.status}</td>
-                        <td>
-                            <input type="number" id="aposta_${item.id}" class="input-money" value="${aposta}" step="0.50" min="0" placeholder="0.00">
-                        </td>
-                        <td>
-                            <input type="number" id="odd_${item.id}" class="input-odd" value="${odd}" step="0.01" min="1" placeholder="1.00">
-                        </td>
-                        <td class="${classeLucro}">${aposta > 0 ? textoLucro : '-'}</td>
-                        <td>
-                            <button class="btn-update" id="btn_${item.id}" onclick="atualizarValores('${item.id}', this)">Salvar</button>
-                        </td>
-                    </tr>
+            divLista.innerHTML = '';
+            data.forEach(aposta => {
+                const card = document.createElement('div');
+                card.className = 'aposta-card';
+                card.id = `aposta_${aposta.id}`;
+                card.innerHTML = `
+                    <div class="confronto">${aposta.time_casa} x ${aposta.time_fora}</div>
+                    <div class="sugestao-txt">📌 Radar Sugeriu: ${aposta.sugestao_aposta}</div>
+                    
+                    <div class="inputs-aposta">
+                        <div>
+                            <label>Valor Apostado (R$)</label>
+                            <input type="number" id="valor_${aposta.id}" placeholder="Ex: 50" step="0.01">
+                        </div>
+                        <div>
+                            <label>Odd (Cotação)</label>
+                            <input type="number" id="odd_${aposta.id}" placeholder="Ex: 1.85" step="0.01">
+                        </div>
+                    </div>
+                    
+                    <div class="action-buttons">
+                        <button class="btn-green" onclick="resolverAposta(${aposta.id}, 'green', this)">✅ GREEN</button>
+                        <button class="btn-red" onclick="resolverAposta(${aposta.id}, 'red', this)">❌ RED</button>
+                    </div>
                 `;
+                divLista.appendChild(card);
             });
-
-            atualizarPainel(totalProfit, totalInvested);
         }
 
-        // --- ATUALIZAR NÚMEROS DO TOPO ---
-        function atualizarPainel(lucro, investido) {
-            // A Banca Atual parte de ZERO e soma o lucro/prejuízo
-            const bancaAtual = 0 + lucro;
+        // 3. DAR BAIXA NA APOSTA (CALCULAR LUCRO E SALVAR)
+        async function resolverAposta(idAposta, resultadoFinal, btnElement) {
+            const valorInput = document.getElementById(`valor_${idAposta}`).value;
+            const oddInput = document.getElementById(`odd_${idAposta}`).value;
 
-            document.getElementById('currentBank').innerText = `R$ ${bancaAtual.toFixed(2)}`;
-            document.getElementById('currentBank').className = bancaAtual >= 0 ? 'pos' : 'neg';
+            if (!valorInput || !oddInput) {
+                alert("Por favor, preencha o Valor Apostado e a Odd para dar a baixa.");
+                return;
+            }
 
-            document.getElementById('totalProfit').innerText = lucro >= 0 ? `+ R$ ${lucro.toFixed(2)}` : `- R$ ${Math.abs(lucro).toFixed(2)}`;
-            document.getElementById('totalProfit').className = lucro >= 0 ? 'pos' : 'neg';
-            
-            const roi = investido > 0 ? (lucro / investido) * 100 : 0;
-            document.getElementById('totalROI').innerText = `${roi.toFixed(1)}%`;
-            document.getElementById('totalROI').className = roi >= 0 ? 'pos' : 'neg';
-        }
+            const valor = parseFloat(valorInput);
+            const odd = parseFloat(oddInput);
 
-        // --- SALVAR MUDANÇAS NO SUPABASE ---
-        async function atualizarValores(id, btn) {
-            const novaAposta = parseFloat(document.getElementById(`aposta_${id}`).value) || 0;
-            const novaOdd = parseFloat(document.getElementById(`odd_${id}`).value) || 0;
+            // Calcula a matemática da banca
+            if (resultadoFinal === 'green') {
+                const lucroPuro = valor * (odd - 1);
+                saldoAtual += lucroPuro;
+            } else if (resultadoFinal === 'red') {
+                saldoAtual -= valor;
+            }
 
-            btn.innerText = "⏳";
-            btn.disabled = true;
+            // Atualiza o visor da banca e salva no navegador
+            localStorage.setItem('minhaBanca', saldoAtual);
+            atualizarTelaSaldo();
 
-            const { error } = await supabase
+            // Salva no Supabase que essa aposta não está mais pendente
+            btnElement.innerText = "Salvando...";
+            const { error } = await clienteSupabase
                 .from('partidas')
-                .update({ 
-                    valor_aposta: novaAposta, 
-                    odd_final: novaOdd 
-                })
-                .eq('id', id);
+                .update({ resultado: resultadoFinal })
+                .eq('id', idAposta);
 
-            if (error) {
-                console.error(error);
-                btn.innerText = "Erro";
-                btn.style.background = "var(--red)";
+            if (!error) {
+                // Remove o card da tela com uma animação
+                const card = document.getElementById(`aposta_${idAposta}`);
+                card.style.opacity = '0';
+                setTimeout(() => card.remove(), 300);
             } else {
-                // Atualiza a tela toda para recalcular a banca
-                carregarDadosFinanceiros();
+                alert("Erro ao salvar no banco de dados.");
+                btnElement.innerText = resultadoFinal === 'green' ? "✅ GREEN" : "❌ RED";
             }
         }
 
-        // Inicia o carregamento assim que a página abre
-        window.onload = carregarDadosFinanceiros;
+        // Inicia a página
+        carregarPendentes();
     </script>
 </body>
 </html>
