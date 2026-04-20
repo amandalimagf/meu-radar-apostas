@@ -3,125 +3,274 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Radar Pro - Victor Alexo</title>
+    <title>Radar Pro - Real 100%</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root { --primary: #00d1b2; --bg: #121212; --card: #1e1e1e; --green: #2ecc71; --orange: #f39c12; --red: #e74c3c; }
-        body { font-family: 'Segoe UI', sans-serif; background-color: var(--bg); color: white; padding: 15px; max-width: 600px; margin: auto; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background-color: var(--bg); color: white; padding: 15px; max-width: 600px; margin: auto; }
+        
         .nav-menu { display: flex; gap: 10px; margin-bottom: 20px; overflow-x: auto; padding-bottom: 10px; }
-        .nav-menu a { color: white; text-decoration: none; padding: 8px 15px; background: #333; border-radius: 6px; font-size: 0.9em; white-space: nowrap; }
-        .nav-menu a.active { background: var(--primary); color: #121212; font-weight: bold; }
-        .filter-container { background: var(--card); padding: 15px; border-radius: 12px; margin-bottom: 15px; border: 1px solid #333; }
-        select { width: 100%; padding: 12px; background: #2a2a2a; color: white; border: 1px solid #444; border-radius: 8px; margin-top: 5px; }
-        .btn-scan { width: 100%; padding: 16px; background: var(--primary); border: none; border-radius: 10px; color: #121212; font-weight: bold; cursor: pointer; }
-        .match-card { background: var(--card); padding: 15px; border-radius: 12px; margin-bottom: 15px; border-left: 4px solid var(--primary); }
-        .confronto { display: flex; justify-content: space-between; align-items: center; font-weight: bold; margin-bottom: 15px; }
-        .btn-analisar { width: 100%; padding: 10px; background: transparent; color: var(--primary); border: 1px solid var(--primary); border-radius: 6px; cursor: pointer; font-weight: bold; }
-        .painel-analise { display: none; margin-top: 15px; padding-top: 15px; border-top: 1px solid #333; }
+        .nav-menu a { color: white; text-decoration: none; padding: 10px 15px; background: #333; border-radius: 8px; font-weight: bold; white-space: nowrap; transition: 0.2s; }
+        .nav-menu a.active { background: var(--primary); color: #121212; }
+
+        .header { text-align: center; margin-bottom: 20px; }
+        h1 { color: var(--primary); margin: 0; font-size: 1.8em; }
+        p { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+        
+        .filter-container { background: var(--card); padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #333; }
+        label { display: block; margin-bottom: 8px; font-size: 0.8em; color: #aaa; text-transform: uppercase; font-weight: bold; }
+        select { width: 100%; padding: 12px; background: #2a2a2a; color: white; border: 1px solid #444; border-radius: 8px; font-size: 1em; cursor: pointer; }
+
+        .btn-scan { width: 100%; padding: 16px; background: var(--primary); border: none; border-radius: 10px; color: #121212; font-weight: bold; font-size: 1.1em; cursor: pointer; transition: 0.2s; }
+        .btn-scan:disabled { background: #555; color: #888; cursor: not-allowed; }
+
+        .resultados { margin-top: 20px; display: flex; flex-direction: column; gap: 15px; }
+        .match-card { background: var(--card); padding: 15px; border-radius: 12px; border-left: 4px solid var(--primary); }
+        
+        .liga-tag { font-size: 0.7em; color: var(--primary); background: rgba(0,209,178,0.1); padding: 4px 8px; border-radius: 4px; display: inline-block; margin-bottom: 10px; font-weight: bold; }
+        .confronto { font-size: 1.1em; font-weight: bold; display: flex; justify-content: space-between; margin-bottom: 15px; align-items: center; }
+        .time { flex: 1; text-align: center; }
+        
+        .btn-analisar { width: 100%; padding: 12px; background: #2a2a2a; color: var(--primary); border: 1px solid var(--primary); border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        .btn-analisar:hover { background: var(--primary); color: #121212; }
+        .btn-analisar:disabled { border-color: #555; color: #888; }
+
+        .painel-analise { display: none; margin-top: 15px; border-top: 1px solid #333; padding-top: 15px;}
+        
+        .prob-bar-container { display: flex; height: 10px; border-radius: 5px; overflow: hidden; background: #333; margin-bottom: 5px; }
+        .prob-bar { height: 100%; }
+        .stats { display: flex; justify-content: space-between; font-size: 0.85em; color: #ccc; margin-bottom: 15px; font-weight: bold;}
+        
         .market-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
-        .market-item { background: #2a2a2a; padding: 8px; border-radius: 6px; font-size: 0.85em; display: flex; justify-content: space-between; }
-        .market-item span:last-child { color: var(--primary); font-weight: bold; }
-        .sugestao-box { background: rgba(0,209,178,0.1); padding: 10px; border-radius: 8px; text-align: center; color: var(--primary); border: 1px dashed var(--primary); }
+        .market-item { background: #252525; padding: 10px; border-radius: 8px; font-size: 0.85em; border: 1px solid #333; }
+        .market-item span { display: block; }
+        .market-item span:first-child { color: #aaa; margin-bottom: 4px; font-size: 0.9em; }
+        .market-item span:last-child { color: var(--primary); font-weight: bold; font-size: 1.1em; }
+
+        .sugestao { padding: 12px; background: rgba(0, 209, 178, 0.1); border-radius: 8px; font-size: 1em; text-align: center; color: var(--primary); font-weight: bold; border: 1px dashed var(--primary); margin-bottom: 15px; }
+        .btn-save { width: 100%; padding: 12px; background: #333; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
     </style>
 </head>
 <body>
 
     <div class="nav-menu">
         <a href="index.html" class="active">Radar Pro</a>
-        <a href="historico.html">Histórico</a>
-        <a href="banca.html">Banca</a>
+        <a href="historico.html">Meu Histórico</a>
+        <a href="banca.html">Gestão de Banca</a>
+    </div>
+
+    <div class="header">
+        <h1>Radar Real 100% 🎯</h1>
+        <p>Estatísticas puxadas da Tabela de Classificação Real</p>
     </div>
 
     <div class="filter-container">
-        <label>Selecionar Campeonato:</label>
+        <label>Ligas Garantidas (Dados Reais)</label>
         <select id="filtroLiga">
-            <option value="71">🇧🇷 Brasileirão Série A</option>
-            <option value="72">🇧🇷 Brasileirão Série B</option>
-            <option value="39">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League</option>
-            <option value="140">🇪🇸 La Liga</option>
+            <option value="BSA">🇧🇷 Brasileirão Série A</option>
+            <option value="PL">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League</option>
+            <option value="ELC">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Championship (ING 2)</option>
+            <option value="PD">🇪🇸 La Liga</option>
+            <option value="BL1">🇩🇪 Bundesliga</option>
+            <option value="SA">🇮🇹 Serie A (Itália)</option>
+            <option value="FL1">🇫🇷 Ligue 1</option>
+            <option value="PPL">🇵🇹 Primeira Liga</option>
+            <option value="DED">🇳🇱 Eredivisie (Holanda)</option>
+            <option value="CL">⭐ Champions League</option>
         </select>
     </div>
 
-    <button id="btnEscanear" class="btn-scan" onclick="buscarJogos()">Escanear Jogos de Hoje</button>
+    <button id="btnEscanear" class="btn-scan" onclick="buscarJogos()">Carregar Jogos de Hoje</button>
+
     <div id="listaResultados" class="resultados"></div>
 
     <script>
-        const API_KEY = 'c900e34b4839f2253442fe0370ead119';
+        const API_KEY = 'b9ba384b106c433686606c4dfa53261a'; 
+        
+        // A MÁGICA: Em vez de ir na API, vamos no nosso próprio túnel na Vercel
+        const BASE_URL = '/api/football';
+        
+        const SUPABASE_URL = 'https://yzvaughqwbeieiimxwooj.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl6dmF1Z2hxd2JlaWVpbXh3b29qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY1MjYyNjMsImV4cCI6MjA5MjEwMjI2M30.Ivm9CI-cVaM0e2MW7IEILgZU5yG_kpD35p8hEdSdD48';
+        const clienteSupabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         async function buscarJogos() {
             const btn = document.getElementById('btnEscanear');
-            const div = document.getElementById('listaResultados');
-            const ligaSelecionada = document.getElementById('filtroLiga').value;
+            const divResultados = document.getElementById('listaResultados');
+            const ligaId = document.getElementById('filtroLiga').value;
             
             btn.disabled = true;
-            btn.innerText = 'Buscando Dados...';
-            div.innerHTML = '';
+            btn.innerText = 'Consultando Jogos Reais...';
+            divResultados.innerHTML = '';
 
             try {
-                const hoje = new Date().toLocaleDateString('en-CA');
-                const res = await fetch(`https://v3.football.api-sports.io/fixtures?date=${hoje}`, {
-                    headers: { 'x-apisports-key': API_KEY }
-                });
-                const data = await res.json();
+                const hoje = new Date().toLocaleDateString('en-CA'); 
                 
-                // FILTRO CORRIGIDO: Só mostra o que você escolheu no Select
-                const jogos = data.response.filter(j => j.league.id == ligaSelecionada);
+                const res = await fetch(`${BASE_URL}/matches?competitions=${ligaId}&dateFrom=${hoje}&dateTo=${hoje}`, {
+                    method: 'GET',
+                    headers: { 'X-Auth-Token': API_KEY }
+                });
+                
+                const data = await res.json();
 
-                if (jogos.length === 0) {
-                    div.innerHTML = '<p style="text-align:center; padding:20px;">Nenhum jogo desta liga hoje.</p>';
-                } else {
-                    jogos.forEach(j => {
-                        const id = j.fixture.id;
-                        div.innerHTML += `
-                            <div class="match-card">
-                                <div class="confronto">
-                                    <span>${j.teams.home.name}</span>
-                                    <span style="color:#666">VS</span>
-                                    <span>${j.teams.away.name}</span>
-                                </div>
-                                <button class="btn-analisar" onclick="exibirAnalise('${id}', '${j.teams.home.name}', '${j.teams.away.name}')">Ver Análise Completa</button>
-                                <div id="analise_${id}" class="painel-analise"></div>
-                            </div>
-                        `;
-                    });
+                if (data.errorCode) {
+                    divResultados.innerHTML = `<p style="color:var(--orange); text-align:center;">Erro da API: ${data.message}</p>`;
+                    return;
                 }
-            } catch (e) {
-                div.innerHTML = '<p style="color:red">Erro na conexão.</p>';
+
+                const jogos = data.matches;
+
+                if (!jogos || jogos.length === 0) {
+                    divResultados.innerHTML = `<p style="text-align:center; padding: 20px; background: #252525; border-radius: 8px;">Nenhum jogo agendado nesta liga para hoje.</p>`;
+                } else {
+                    jogos.forEach(jogo => renderizarCard(jogo, ligaId));
+                }
+            } catch (error) {
+                divResultados.innerHTML = `<p style="color:red; text-align:center;">Erro de conexão. Lembre-se de acessar pelo link da Vercel!</p>`;
+                console.error(error);
             } finally {
                 btn.disabled = false;
-                btn.innerText = 'Escanear Jogos de Hoje';
+                btn.innerText = 'Atualizar Lista de Jogos';
             }
         }
 
-        function exibirAnalise(id, casa, fora) {
-            const painel = document.getElementById(`analise_${id}`);
-            const seed = casa + fora + new Date().getDate();
+        function renderizarCard(jogo, ligaId) {
+            const timeCasa = jogo.homeTeam.shortName || jogo.homeTeam.name;
+            const timeFora = jogo.awayTeam.shortName || jogo.awayTeam.name;
+            const idCasa = jogo.homeTeam.id;
+            const idFora = jogo.awayTeam.id;
+            const status = jogo.status === 'IN_PLAY' ? '🔴 AO VIVO' : new Date(jogo.utcDate).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'});
             
-            // Gerador de probabilidade baseado no nome dos times (Estabilidade)
-            const calc = (s) => {
-                let h = 0; for(let i=0; i<s.length; i++) h = (h << 5) - h + s.charCodeAt(i);
-                return Math.abs(h % 100);
-            };
-
-            const pCasa = 30 + (calc(casa) % 40);
-            const pGols = 40 + (calc(seed) % 50);
-            const pAmbas = 35 + (calc(fora) % 45);
-            const corners = 7 + (calc(seed) % 6);
-            const cartoes = 3 + (calc(casa + "ref") % 5);
-
-            painel.innerHTML = `
-                <div class="market-grid">
-                    <div class="market-item"><span>Vercer ${casa}:</span> <span>${pCasa}%</span></div>
-                    <div class="market-item"><span>Ambas Marcam:</span> <span>${pAmbas}%</span></div>
-                    <div class="market-item"><span>Over 2.5 Gols:</span> <span>${pGols}%</span></div>
-                    <div class="market-item"><span>Escanteios:</span> <span>+${corners}</span></div>
-                    <div class="market-item"><span>Cartões:</span> <span>+${cartoes}</span></div>
+            const idCard = `jogo_${jogo.id}`;
+            const card = document.createElement('div');
+            card.className = 'match-card';
+            card.id = idCard;
+            
+            card.innerHTML = `
+                <div class="liga-tag">${jogo.competition.name} • ${status}</div>
+                <div class="confronto">
+                    <span class="time" style="color:var(--green)">${timeCasa}</span>
+                    <span style="color:#666; font-size: 0.8em; padding: 0 10px;">X</span>
+                    <span class="time" style="color:var(--orange)">${timeFora}</span>
                 </div>
-                <div class="sugestao-box">
-                    🎯 Palpite: ${pCasa > 55 ? 'Vitória '+casa : (pGols > 60 ? 'Over 2.5 Gols' : 'Ambas Marcam')}
-                </div>
+                
+                <button id="btn_${idCard}" class="btn-analisar" onclick="gerarAnaliseMatematicaReal(this, '${idCard}', '${ligaId}', ${idCasa}, ${idFora}, '${timeCasa}', '${timeFora}')">
+                    🎯 Extrair Tabela e Analisar
+                </button>
+                
+                <div class="painel-analise" id="analise_${idCard}"></div>
             `;
-            painel.style.display = 'block';
+            document.getElementById('listaResultados').appendChild(card);
+        }
+
+        async function gerarAnaliseMatematicaReal(botao, idCard, ligaId, idCasa, idFora, timeCasa, timeFora) {
+            const painel = document.getElementById(`analise_${idCard}`);
+            botao.disabled = true;
+            botao.innerText = '⏳ Lendo Tabela de Classificação...';
+
+            try {
+                const res = await fetch(`${BASE_URL}/competitions/${ligaId}/standings`, {
+                    headers: { 'X-Auth-Token': API_KEY }
+                });
+                const data = await res.json();
+
+                let lambdaCasa = 1.0; 
+                let lambdaFora = 1.0;
+                let jogosCasa = 0;
+                let jogosFora = 0;
+
+                if (data.standings) {
+                    data.standings.forEach(grupo => {
+                        grupo.table.forEach(time => {
+                            if (time.team.id === idCasa && time.playedGames > 0) {
+                                lambdaCasa = time.goalsFor / time.playedGames;
+                                jogosCasa = time.playedGames;
+                            }
+                            if (time.team.id === idFora && time.playedGames > 0) {
+                                lambdaFora = time.goalsFor / time.playedGames;
+                                jogosFora = time.playedGames;
+                            }
+                        });
+                    });
+                }
+
+                lambdaCasa = Math.min(Math.max(lambdaCasa, 0.5), 3.0);
+                lambdaFora = Math.min(Math.max(lambdaFora, 0.5), 3.0);
+
+                let pC = 0, pE = 0, pF = 0, btts = 0, o25 = 0;
+                
+                for (let i = 0; i <= 6; i++) {
+                    for (let j = 0; j <= 6; j++) {
+                        let p = poisson(i, lambdaCasa) * poisson(j, lambdaFora);
+                        if (i > j) pC += p; else if (i < j) pF += p; else pE += p;
+                        if (i > 0 && j > 0) btts += p;
+                        if ((i + j) > 2.5) o25 += p;
+                    }
+                }
+
+                const probCasa = Math.round(pC * 100); 
+                const probEmpate = Math.round(pE * 100); 
+                const probFora = Math.round(pF * 100);
+                const probAmbas = Math.round(btts * 100); 
+                const probO25 = Math.round(o25 * 100);
+
+                let sugestao = "Análise Inconclusiva";
+                if (probCasa > 55) sugestao = `Vitória ${timeCasa}`;
+                else if (probFora > 55) sugestao = `Vitória ${timeFora}`;
+                else if (probO25 > 60) sugestao = `Over 2.5 Gols`;
+                else if (probAmbas > 55) sugestao = `Ambas Marcam (BTTS)`;
+                else sugestao = `Dupla Chance: Casa ou Empate`;
+
+                painel.innerHTML = `
+                    <div style="text-align:center; font-size:0.75em; color:#aaa; margin-bottom:10px;">
+                        Baseado em ${jogosCasa} jogos (${timeCasa}) e ${jogosFora} jogos (${timeFora}) na temporada.
+                    </div>
+
+                    <div class="prob-bar-container">
+                        <div class="prob-bar" style="width: ${probCasa}%; background: var(--green);"></div>
+                        <div class="prob-bar" style="width: ${probEmpate}%; background: #444;"></div>
+                        <div class="prob-bar" style="width: ${probFora}%; background: var(--orange);"></div>
+                    </div>
+                    <div class="stats"><span style="color:var(--green)">${probCasa}% Casa</span><span>EMP ${probEmpate}%</span><span style="color:var(--orange)">${probFora}% Fora</span></div>
+                    
+                    <div class="market-grid">
+                        <div class="market-item"><span>Média Gols Feitos</span> <span>${lambdaCasa.toFixed(1)} x ${lambdaFora.toFixed(1)}</span></div>
+                        <div class="market-item"><span>🤝 Ambas Marcam</span> <span>${probAmbas}%</span></div>
+                        <div class="market-item"><span>⚽ Over 2.5 Gols</span> <span>${probO25}%</span></div>
+                        <div class="market-item"><span>📉 Under 2.5 Gols</span> <span>${100 - probO25}%</span></div>
+                    </div>
+
+                    <div class="sugestao">🎯 Dica do Poisson Real: <br> ${sugestao}</div>
+                    <button class="btn-save" onclick="salvarAposta('${timeCasa}','${timeFora}',${probCasa},${probEmpate},${probFora},'${sugestao}',this)">💾 Salvar no Histórico</button>
+                `;
+                
+                painel.style.display = 'block';
+                botao.style.display = 'none';
+
+            } catch (error) {
+                botao.innerText = '❌ Erro ao extrair tabela';
+                botao.style.borderColor = 'var(--red)';
+                botao.style.color = 'var(--red)';
+                console.error(error);
+            }
+        }
+
+        function poisson(k, lambda) { return (Math.exp(-lambda) * Math.pow(lambda, k)) / fatorial(k); }
+        function fatorial(n) { if (n === 0 || n === 1) return 1; let r = 1; for (let i = 2; i <= n; i++) r *= i; return r; }
+
+        async function salvarAposta(casa, fora, pC, pE, pF, sug, btn) {
+            btn.innerText = "Salvando...";
+            const { error } = await clienteSupabase.from('partidas').insert([{
+                time_casa: casa, time_fora: fora, prob_vitoria_casa: pC, prob_empate: pE, prob_vitoria_fora: pF, sugestao_aposta: sug
+            }]);
+            if (!error) { 
+                btn.innerText = "Salvo com Sucesso! ✅"; 
+                btn.style.background = "var(--green)"; 
+                btn.style.color = "#121212";
+            } else { 
+                btn.innerText = "Erro ao Salvar ❌"; 
+                btn.style.background = "var(--red)"; 
+            }
         }
     </script>
 </body>
