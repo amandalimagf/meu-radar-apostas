@@ -278,14 +278,22 @@
         async function salvarAposta(casa, fora, pC, pE, pF, sug, btn) {
             btn.innerText = "Salvando...";
             const { error } = await clienteSupabase.from('partidas').insert([{
-                time_casa: casa, time_fora: fora, prob_vitoria_casa: pC, prob_empate: pE, prob_vitoria_fora: pF, sugestao_aposta: sug
+                time_casa: casa, 
+                time_fora: fora, 
+                prob_vitoria_casa: pC, 
+                prob_empate: pE, 
+                prob_vitoria_fora: pF, 
+                sugestao_aposta: sug
             }]);
+            
             if (!error) { 
                 btn.innerText = "Salvo com Sucesso! ✅"; 
                 btn.style.background = "var(--green)"; 
                 btn.style.color = "#121212";
             } else { 
-                btn.innerText = "Erro ao Salvar ❌"; 
+                console.error("Erro detalhado do Supabase:", error);
+                // Vai mostrar o erro real escrito no botão
+                btn.innerText = `Erro: ${error.message}`; 
                 btn.style.background = "var(--red)"; 
             }
         }
