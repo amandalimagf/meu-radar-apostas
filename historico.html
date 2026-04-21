@@ -12,16 +12,23 @@
             background-size: cover;
             color: white; padding: 15px; max-width: 600px; margin: auto; 
         }
-        .nav-menu { display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; overflow-x: auto; padding-bottom: 10px; }
+        .nav-menu { display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; overflow-x: auto; }
         .nav-menu a { color: white; text-decoration: none; padding: 10px 15px; background: #333; border-radius: 8px; font-weight: bold; white-space: nowrap; }
         .nav-menu a.active { background: #00d1b2; color: #121212; }
         
-        .btn-check { width: 100%; padding: 15px; background: #00d1b2; border: none; border-radius: 10px; color: #121212; font-weight: bold; margin-bottom: 20px; cursor: pointer; }
+        /* Estilo do Painel de Dash */
+        .dash-container { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 20px; text-align: center; }
+        .dash-item { background: rgba(30, 30, 30, 0.9); padding: 12px 5px; border-radius: 8px; border: 1px solid #333; }
+        .dash-label { font-size: 0.6em; color: #aaa; font-weight: bold; margin-bottom: 5px; text-transform: uppercase; }
+        .dash-valor { font-size: 1.3em; font-weight: bold; color: white; }
+
+        .btn-check { width: 100%; padding: 15px; background: #00d1b2; border: none; border-radius: 10px; color: #121212; font-weight: bold; margin-bottom: 20px; cursor: pointer; transition: 0.2s; }
+        .btn-check:hover { background: #00b39a; }
         
         .card { background: rgba(30, 30, 30, 0.9); padding: 15px; border-radius: 12px; margin-bottom: 15px; border-left: 5px solid #444; }
         .green { border-left-color: #2ecc71; }
         .red { border-left-color: #e74c3c; }
-        .status-badge { float: right; font-size: 0.8em; padding: 3px 8px; border-radius: 4px; background: #444; }
+        .status-badge { float: right; font-size: 0.7em; padding: 3px 8px; border-radius: 4px; background: #444; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -31,7 +38,27 @@
         <a href="historico.html" class="active">Meu Histórico</a>
     </div>
 
-    <h1>Desempenho 📊</h1>
+    <h1 style="text-align: center; color: #00d1b2;">Desempenho 📊</h1>
+
+    <div class="dash-container">
+        <div class="dash-item">
+            <div class="dash-label">Total</div>
+            <div id="dashTotal" class="dash-valor">0</div>
+        </div>
+        <div class="dash-item">
+            <div class="dash-label">Greens</div>
+            <div id="dashGreen" class="dash-valor" style="color: #2ecc71;">0</div>
+        </div>
+        <div class="dash-item">
+            <div class="dash-label">Reds</div>
+            <div id="dashRed" class="dash-valor" style="color: #e74c3c;">0</div>
+        </div>
+        <div class="dash-item">
+            <div class="dash-label">Acerto</div>
+            <div id="dashTaxa" class="dash-valor" style="color: #00d1b2;">0%</div>
+        </div>
+    </div>
+
     <button class="btn-check" id="btnAutoCheck" onclick="verificarResultadosAutomatico()">🤖 Conferir Resultados via API</button>
 
     <div id="listaHistorico"></div>
@@ -49,7 +76,15 @@
             
             if (data) {
                 div.innerHTML = '';
+                let total = 0, greens = 0, reds = 0;
+
                 data.forEach(item => {
+                    // Contagem para o Painel
+                    if (item.resultado === 'green') greens++;
+                    if (item.resultado === 'red') reds++;
+                    if (item.resultado === 'green' || item.resultado === 'red') total++;
+
+                    // Renderização do Card
                     const corClasse = item.resultado === 'green' ? 'green' : (item.resultado === 'red' ? 'red' : '');
                     div.innerHTML += `
                         <div class="card ${corClasse}">
@@ -59,19 +94,28 @@
                         </div>
                     `;
                 });
+
+                // Atualiza os valores no Painel
+                document.getElementById('dashTotal').innerText = total;
+                document.getElementById('dashGreen').innerText = greens;
+                document.getElementById('dashRed').innerText = reds;
+                const taxa = total > 0 ? Math.round((greens / total) * 100) : 0;
+                document.getElementById('dashTaxa').innerText = `${taxa}%`;
+                
+                if(taxa < 50 && total > 0) document.getElementById('dashTaxa').style.color = '#e74c3c';
+                else if(taxa >= 70) document.getElementById('dashTaxa').style.color = '#2ecc71';
             }
         }
 
         async function verificarResultadosAutomatico() {
             const btn = document.getElementById('btnAutoCheck');
             btn.disabled = true;
-            btn.innerText = '🤖 Acessando API e Conferindo...';
+            btn.innerText = '🤖 Conferindo Resultados...';
 
-            // 1. Pega jogos pendentes que têm ID da API
             const { data: pendentes } = await clienteSupabase.from('partidas').select('*').is('resultado', null).not('id_jogo_api', 'is', null);
 
             if (!pendentes || pendentes.length === 0) {
-                alert("Nenhuma aposta pendente para conferir.");
+                alert("Nenhuma aposta pendente com ID da API encontrada.");
                 btn.disabled = false;
                 btn.innerText = '🤖 Conferir Resultados via API';
                 return;
@@ -90,7 +134,6 @@
                         const totalGols = golsCasa + golsFora;
                         let deuGreen = false;
 
-                        // Lógica de conferência automática baseada no texto da sugestão
                         const sug = aposta.sugestao_aposta.toLowerCase();
                         
                         if (sug.includes('over 2.5') && totalGols > 2.5) deuGreen = true;
@@ -100,14 +143,12 @@
                         else if (sug.includes('casa ou empate') && golsCasa >= golsFora) deuGreen = true;
 
                         const resultadoFinal = deuGreen ? 'green' : 'red';
-
-                        // Atualiza no Banco de Dados
                         await clienteSupabase.from('partidas').update({ resultado: resultadoFinal }).eq('id', aposta.id);
                     }
-                } catch (e) { console.error("Erro ao conferir jogo", aposta.id); }
+                } catch (e) { console.error("Erro no jogo", aposta.id); }
             }
 
-            alert("Conferência concluída!");
+            alert("Sincronização concluída!");
             location.reload();
         }
 
