@@ -155,6 +155,7 @@
             const timeFora = jogo.awayTeam.shortName || jogo.awayTeam.name;
             const idCasa = jogo.homeTeam.id;
             const idFora = jogo.awayTeam.id;
+            const idJogoAPI = jogo.id; // INJEÇÃO DO ID AQUI
             
             // 1. Tratamento completo de Data e Hora
             const dataJogo = new Date(jogo.utcDate);
@@ -171,6 +172,7 @@
             card.className = 'match-card';
             card.id = idCard;
             
+            // INJEÇÃO DO idJogoAPI NO BOTÃO DE ANALISAR
             card.innerHTML = `
                 <div class="liga-tag">${jogo.competition.name} • 🗓️ ${infoTempo}</div>
                 <div class="confronto">
@@ -179,7 +181,7 @@
                     <span class="time" style="color:var(--orange)">${timeFora}</span>
                 </div>
                 
-                <button id="btn_${idCard}" class="btn-analisar" onclick="gerarAnaliseMatematicaReal(this, '${idCard}', '${ligaId}', ${idCasa}, ${idFora}, '${timeCasa}', '${timeFora}')">
+                <button id="btn_${idCard}" class="btn-analisar" onclick="gerarAnaliseMatematicaReal(this, '${idCard}', '${ligaId}', ${idCasa}, ${idFora}, '${timeCasa}', '${timeFora}', ${idJogoAPI})">
                     🎯 Extrair Tabela e Analisar
                 </button>
                 
@@ -188,7 +190,8 @@
             document.getElementById('listaResultados').appendChild(card);
         }
 
-        async function gerarAnaliseMatematicaReal(botao, idCard, ligaId, idCasa, idFora, timeCasa, timeFora) {
+        // INJEÇÃO DO idJogoAPI NOS PARÂMETROS DA FUNÇÃO
+        async function gerarAnaliseMatematicaReal(botao, idCard, ligaId, idCasa, idFora, timeCasa, timeFora, idJogoAPI) {
             const painel = document.getElementById(`analise_${idCard}`);
             botao.disabled = true;
             botao.innerText = '⏳ Lendo Tabela de Classificação...';
@@ -246,6 +249,7 @@
                 else if (probAmbas > 55) sugestao = `Ambas Marcam (BTTS)`;
                 else sugestao = `Dupla Chance: Casa ou Empate`;
 
+                // INJEÇÃO DO idJogoAPI NO BOTÃO DE SALVAR
                 painel.innerHTML = `
                     <div style="text-align:center; font-size:0.75em; color:#aaa; margin-bottom:10px;">
                         Baseado em ${jogosCasa} jogos (${timeCasa}) e ${jogosFora} jogos (${timeFora}) na temporada.
@@ -266,7 +270,7 @@
                     </div>
 
                     <div class="sugestao">🎯 Dica do Poisson Real: <br> ${sugestao}</div>
-                    <button class="btn-save" onclick="salvarAposta('${timeCasa}','${timeFora}',${probCasa},${probEmpate},${probFora},'${sugestao}',this)">💾 Salvar no Histórico</button>
+                    <button class="btn-save" onclick="salvarAposta('${timeCasa}','${timeFora}',${probCasa},${probEmpate},${probFora},'${sugestao}', ${idJogoAPI}, this)">💾 Salvar no Histórico</button>
                 `;
                 
                 painel.style.display = 'block';
@@ -283,7 +287,8 @@
         function poisson(k, lambda) { return (Math.exp(-lambda) * Math.pow(lambda, k)) / fatorial(k); }
         function fatorial(n) { if (n === 0 || n === 1) return 1; let r = 1; for (let i = 2; i <= n; i++) r *= i; return r; }
 
-        async function salvarAposta(casa, fora, pC, pE, pF, sug, btn) {
+        // INJEÇÃO DO idJogoAPI NOS PARÂMETROS E NO BANCO DE DADOS
+        async function salvarAposta(casa, fora, pC, pE, pF, sug, idJogoAPI, btn) {
             btn.innerText = "Salvando...";
             const { error } = await clienteSupabase.from('partidas').insert([{
                 time_casa: casa, 
@@ -291,7 +296,8 @@
                 prob_vitoria_casa: pC, 
                 prob_empate: pE, 
                 prob_vitoria_fora: pF, 
-                sugestao_aposta: sug
+                sugestao_aposta: sug,
+                id_jogo_api: idJogoAPI
             }]);
             
             if (!error) { 
