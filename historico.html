@@ -16,7 +16,6 @@
         .nav-menu a { color: white; text-decoration: none; padding: 10px 15px; background: #333; border-radius: 8px; font-weight: bold; white-space: nowrap; }
         .nav-menu a.active { background: #00d1b2; color: #121212; }
         
-        /* Estilo do Painel de Dash */
         .dash-container { display: grid; gap: 10px; margin-bottom: 10px; text-align: center; }
         .dash-grid-4 { grid-template-columns: repeat(4, 1fr); }
         .dash-grid-2 { grid-template-columns: 1fr 1fr; margin-bottom: 20px; }
@@ -32,6 +31,8 @@
         .green { border-left-color: #2ecc71; }
         .red { border-left-color: #e74c3c; }
         .status-badge { float: right; font-size: 0.7em; padding: 3px 8px; border-radius: 4px; background: #444; font-weight: bold; }
+        
+        select.filtro-mes { width: 100%; padding: 12px; background: #2a2a2a; color: white; border: 1px solid #444; border-radius: 8px; font-size: 1em; margin-bottom: 15px; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -43,34 +44,20 @@
 
     <h1 style="text-align: center; color: #00d1b2; margin-bottom: 15px;">Desempenho 📊</h1>
 
+    <select id="filtroMes" class="filtro-mes" onchange="renderizarTela()">
+        <option value="todos">Todos os Meses</option>
+    </select>
+
     <div class="dash-container dash-grid-4">
-        <div class="dash-item">
-            <div class="dash-label">Total</div>
-            <div id="dashTotal" class="dash-valor">0</div>
-        </div>
-        <div class="dash-item">
-            <div class="dash-label">Greens</div>
-            <div id="dashGreen" class="dash-valor" style="color: #2ecc71;">0</div>
-        </div>
-        <div class="dash-item">
-            <div class="dash-label">Reds</div>
-            <div id="dashRed" class="dash-valor" style="color: #e74c3c;">0</div>
-        </div>
-        <div class="dash-item">
-            <div class="dash-label">Acerto</div>
-            <div id="dashTaxa" class="dash-valor" style="color: #00d1b2;">0%</div>
-        </div>
+        <div class="dash-item"><div class="dash-label">Total</div><div id="dashTotal" class="dash-valor">0</div></div>
+        <div class="dash-item"><div class="dash-label">Greens</div><div id="dashGreen" class="dash-valor" style="color: #2ecc71;">0</div></div>
+        <div class="dash-item"><div class="dash-label">Reds</div><div id="dashRed" class="dash-valor" style="color: #e74c3c;">0</div></div>
+        <div class="dash-item"><div class="dash-label">Acerto</div><div id="dashTaxa" class="dash-valor" style="color: #00d1b2;">0%</div></div>
     </div>
 
     <div class="dash-container dash-grid-2">
-        <div class="dash-item" style="border-color: #f39c12;">
-            <div class="dash-label" style="color: #f39c12;">🏆 Melhor Mercado</div>
-            <div id="dashMercado" class="dash-valor" style="font-size: 1.1em;">Calculando...</div>
-        </div>
-        <div class="dash-item" style="border-color: #ff4757;">
-            <div class="dash-label" style="color: #ff4757;">🔥 Sequência de Greens</div>
-            <div id="dashStreak" class="dash-valor" style="font-size: 1.1em;">0</div>
-        </div>
+        <div class="dash-item" style="border-color: #f39c12;"><div class="dash-label" style="color: #f39c12;">🏆 Melhor Mercado</div><div id="dashMercado" class="dash-valor" style="font-size: 1.1em;">-</div></div>
+        <div class="dash-item" style="border-color: #ff4757;"><div class="dash-label" style="color: #ff4757;">🔥 Sequência Atual</div><div id="dashStreak" class="dash-valor" style="font-size: 1.1em;">0</div></div>
     </div>
 
     <button class="btn-check" id="btnAutoCheck" onclick="verificarResultadosAutomatico()">🤖 Conferir Resultados via API</button>
@@ -84,142 +71,130 @@
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR2ZHdnZnl0Z3V3bHNwcHZqdmtrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY1Njk0OTEsImV4cCI6MjA5MjE0NTQ5MX0.mKbLRjWV3eoeAxUtMX-yY24hZQ-mN0aEtnhxk2pH5Us';
         const clienteSupabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+        let todosOsJogos = []; // Vai guardar tudo para não precisar ir no banco toda hora
+
         async function carregarHistorico() {
-            const div = document.getElementById('listaHistorico');
-            // Busca do mais recente para o mais antigo (importante para o Streak)
             const { data, error } = await clienteSupabase.from('partidas').select('*').order('id', { ascending: false });
-            
             if (data) {
-                div.innerHTML = '';
-                let total = 0, greens = 0, reds = 0;
-                
-                // Variáveis da Inteligência
-                let streak = 0;
-                let contandoStreak = true;
-                let mercados = {
-                    'Over 2.5': { total: 0, greens: 0 },
-                    'Ambas Marcam': { total: 0, greens: 0 },
-                    'Dupla Chance': { total: 0, greens: 0 },
-                    'Vitória Casa': { total: 0, greens: 0 },
-                    'Vitória Fora': { total: 0, greens: 0 }
-                };
+                todosOsJogos = data;
+                preencherFiltroMes(data);
+                renderizarTela(); // Desenha a tela inicial
+            }
+        }
 
-                data.forEach(item => {
-                    // Contagem Básica
-                    if (item.resultado === 'green') greens++;
-                    if (item.resultado === 'red') reds++;
-                    if (item.resultado === 'green' || item.resultado === 'red') total++;
+        function preencherFiltroMes(data) {
+            const select = document.getElementById('filtroMes');
+            const mesesUnicos = new Set();
+            
+            data.forEach(item => {
+                if (item.created_at) {
+                    const dataObj = new Date(item.created_at);
+                    const mesAno = `${dataObj.getFullYear()}-${String(dataObj.getMonth() + 1).padStart(2, '0')}`;
+                    mesesUnicos.add(mesAno);
+                }
+            });
 
-                    // --- LÓGICA DE INTELIGÊNCIA ---
-                    if (item.resultado) {
-                        // 1. Calculando Streak (Sequência)
-                        if (contandoStreak) {
-                            if (item.resultado === 'green') streak++;
-                            else if (item.resultado === 'red') contandoStreak = false; // Quebrou a sequência
-                        }
+            Array.from(mesesUnicos).sort().reverse().forEach(mesAno => {
+                const [ano, mes] = mesAno.split('-');
+                const nomeMes = new Date(ano, mes - 1).toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
+                const option = document.createElement('option');
+                option.value = mesAno;
+                option.text = nomeMes.charAt(0).toUpperCase() + nomeMes.slice(1);
+                select.appendChild(option);
+            });
+        }
 
-                        // 2. Agrupando por Mercado
-                        let sug = item.sugestao_aposta || '';
-                        let tipo = '';
-                        if (sug.includes('Over 2.5')) tipo = 'Over 2.5';
-                        else if (sug.includes('Ambas Marcam')) tipo = 'Ambas Marcam';
-                        else if (sug.includes('Dupla Chance')) tipo = 'Dupla Chance';
-                        else if (sug.includes('Vitória') && sug.includes(item.time_casa)) tipo = 'Vitória Casa';
-                        else if (sug.includes('Vitória') && sug.includes(item.time_fora)) tipo = 'Vitória Fora';
+        function renderizarTela() {
+            const mesSelecionado = document.getElementById('filtroMes').value;
+            const div = document.getElementById('listaHistorico');
+            div.innerHTML = '';
+            
+            let total = 0, greens = 0, reds = 0, streak = 0;
+            let contandoStreak = true;
+            let mercados = { 'Over 2.5': { total: 0, greens: 0 }, 'Ambas Marcam': { total: 0, greens: 0 }, 'Dupla Chance': { total: 0, greens: 0 }, 'Vitória Casa': { total: 0, greens: 0 }, 'Vitória Fora': { total: 0, greens: 0 } };
 
-                        if (tipo) {
-                            mercados[tipo].total++;
-                            if (item.resultado === 'green') mercados[tipo].greens++;
-                        }
+            // Filtrando os jogos pelo mês selecionado
+            let jogosFiltrados = todosOsJogos;
+            if (mesSelecionado !== 'todos') {
+                jogosFiltrados = todosOsJogos.filter(item => item.created_at && item.created_at.startsWith(mesSelecionado));
+            }
+
+            jogosFiltrados.forEach(item => {
+                if (item.resultado === 'green') greens++;
+                if (item.resultado === 'red') reds++;
+                if (item.resultado === 'green' || item.resultado === 'red') total++;
+
+                if (item.resultado) {
+                    if (contandoStreak) {
+                        if (item.resultado === 'green') streak++;
+                        else if (item.resultado === 'red') contandoStreak = false;
                     }
-
-                    // Renderização do Card
-                    const corClasse = item.resultado === 'green' ? 'green' : (item.resultado === 'red' ? 'red' : '');
-                    div.innerHTML += `
-                        <div class="card ${corClasse}">
-                            <span class="status-badge">${item.resultado ? item.resultado.toUpperCase() : 'PENDENTE'}</span>
-                            <strong>${item.time_casa} x ${item.time_fora}</strong><br>
-                            <small>🎯 Sugestão: ${item.sugestao_aposta}</small>
-                        </div>
-                    `;
-                });
-
-                // --- ATUALIZANDO TELA BÁSICA ---
-                document.getElementById('dashTotal').innerText = total;
-                document.getElementById('dashGreen').innerText = greens;
-                document.getElementById('dashRed').innerText = reds;
-                const taxa = total > 0 ? Math.round((greens / total) * 100) : 0;
-                document.getElementById('dashTaxa').innerText = `${taxa}%`;
-                if(taxa < 50 && total > 0) document.getElementById('dashTaxa').style.color = '#e74c3c';
-                else if(taxa >= 70) document.getElementById('dashTaxa').style.color = '#2ecc71';
-
-                // --- ATUALIZANDO INTELIGÊNCIA TELA ---
-                document.getElementById('dashStreak').innerText = `${streak} 🔥`;
-
-                let melhorMercado = 'Nenhum';
-                let melhorTaxa = -1;
-                
-                for (const [nome, stats] of Object.entries(mercados)) {
-                    if (stats.greens > 0) { // Só considera mercados que já deram Green
-                        let taxaMercado = (stats.greens / stats.total) * 100;
-                        if (taxaMercado > melhorTaxa) {
-                            melhorTaxa = taxaMercado;
-                            melhorMercado = nome;
-                        }
-                    }
+                    let sug = item.sugestao_aposta || '';
+                    let tipo = '';
+                    if (sug.includes('Over 2.5')) tipo = 'Over 2.5';
+                    else if (sug.includes('Ambas Marcam')) tipo = 'Ambas Marcam';
+                    else if (sug.includes('Dupla Chance')) tipo = 'Dupla Chance';
+                    else if (sug.includes('Vitória') && sug.includes(item.time_casa)) tipo = 'Vitória Casa';
+                    else if (sug.includes('Vitória') && sug.includes(item.time_fora)) tipo = 'Vitória Fora';
+                    if (tipo) { mercados[tipo].total++; if (item.resultado === 'green') mercados[tipo].greens++; }
                 }
 
-                if (melhorTaxa > -1) {
-                    document.getElementById('dashMercado').innerText = `${melhorMercado} (${Math.round(melhorTaxa)}%)`;
-                } else {
-                    document.getElementById('dashMercado').innerText = `Aguardando Dados`;
+                const corClasse = item.resultado === 'green' ? 'green' : (item.resultado === 'red' ? 'red' : '');
+                div.innerHTML += `
+                    <div class="card ${corClasse}">
+                        <span class="status-badge">${item.resultado ? item.resultado.toUpperCase() : 'PENDENTE'}</span>
+                        <strong>${item.time_casa} x ${item.time_fora}</strong><br>
+                        <small>🎯 Sugestão: ${item.sugestao_aposta}</small>
+                    </div>
+                `;
+            });
+
+            document.getElementById('dashTotal').innerText = total;
+            document.getElementById('dashGreen').innerText = greens;
+            document.getElementById('dashRed').innerText = reds;
+            const taxa = total > 0 ? Math.round((greens / total) * 100) : 0;
+            document.getElementById('dashTaxa').innerText = `${taxa}%`;
+            if(taxa < 50 && total > 0) document.getElementById('dashTaxa').style.color = '#e74c3c';
+            else if(taxa >= 70) document.getElementById('dashTaxa').style.color = '#2ecc71';
+            else document.getElementById('dashTaxa').style.color = '#00d1b2';
+
+            document.getElementById('dashStreak').innerText = `${streak} 🔥`;
+
+            let melhorMercado = 'Nenhum'; let melhorTaxa = -1;
+            for (const [nome, stats] of Object.entries(mercados)) {
+                if (stats.greens > 0) {
+                    let taxaMercado = (stats.greens / stats.total) * 100;
+                    if (taxaMercado > melhorTaxa) { melhorTaxa = taxaMercado; melhorMercado = nome; }
                 }
             }
+            document.getElementById('dashMercado').innerText = melhorTaxa > -1 ? `${melhorMercado} (${Math.round(melhorTaxa)}%)` : `Aguardando Dados`;
         }
 
         async function verificarResultadosAutomatico() {
             const btn = document.getElementById('btnAutoCheck');
             btn.disabled = true;
             btn.innerText = '🤖 Conferindo Resultados...';
-
             const { data: pendentes } = await clienteSupabase.from('partidas').select('*').is('resultado', null).not('id_jogo_api', 'is', null);
-
-            if (!pendentes || pendentes.length === 0) {
-                alert("Nenhuma aposta pendente com ID da API encontrada.");
-                btn.disabled = false;
-                btn.innerText = '🤖 Conferir Resultados via API';
-                return;
-            }
+            if (!pendentes || pendentes.length === 0) { alert("Nenhuma aposta pendente com ID da API encontrada."); btn.disabled = false; btn.innerText = '🤖 Conferir Resultados via API'; return; }
 
             for (const aposta of pendentes) {
                 try {
-                    const res = await fetch(`${BASE_URL}/matches/${aposta.id_jogo_api}`, {
-                        headers: { 'X-Auth-Token': API_KEY }
-                    });
+                    const res = await fetch(`${BASE_URL}/matches/${aposta.id_jogo_api}`, { headers: { 'X-Auth-Token': API_KEY } });
                     const jogo = await res.json();
-
                     if (jogo.status === 'FINISHED') {
-                        const golsCasa = jogo.score.fullTime.home;
-                        const golsFora = jogo.score.fullTime.away;
-                        const totalGols = golsCasa + golsFora;
-                        let deuGreen = false;
-
-                        const sug = aposta.sugestao_aposta.toLowerCase();
-                        
+                        const golsCasa = jogo.score.fullTime.home; const golsFora = jogo.score.fullTime.away; const totalGols = golsCasa + golsFora;
+                        let deuGreen = false; const sug = aposta.sugestao_aposta.toLowerCase();
                         if (sug.includes('over 2.5') && totalGols > 2.5) deuGreen = true;
                         else if (sug.includes('vitória') && sug.includes(aposta.time_casa.toLowerCase()) && golsCasa > golsFora) deuGreen = true;
                         else if (sug.includes('vitória') && sug.includes(aposta.time_fora.toLowerCase()) && golsFora > golsCasa) deuGreen = true;
                         else if (sug.includes('ambas marcam') && golsCasa > 0 && golsFora > 0) deuGreen = true;
                         else if (sug.includes('casa ou empate') && golsCasa >= golsFora) deuGreen = true;
-
                         const resultadoFinal = deuGreen ? 'green' : 'red';
                         await clienteSupabase.from('partidas').update({ resultado: resultadoFinal }).eq('id', aposta.id);
                     }
                 } catch (e) { console.error("Erro no jogo", aposta.id); }
             }
-
-            alert("Sincronização concluída!");
-            location.reload();
+            alert("Sincronização concluída!"); location.reload();
         }
 
         carregarHistorico();
