@@ -3,66 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BetPredictor - Meu Histórico</title>
+    <title>Victor Tips - Histórico Profissional</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        :root { --primary: #00d1b2; --bg: #121212; --card: #1e1e1e; --green: #2ecc71; --red: #e74c3c; }
         body { 
-            font-family: 'Segoe UI', Tahoma, sans-serif; 
-            background: linear-gradient(rgba(18, 18, 18, 0.85), rgba(18, 18, 18, 0.95)), url('logo.jpg') no-repeat center center fixed;
+            font-family: 'Segoe UI', sans-serif; 
+            background: linear-gradient(rgba(18, 18, 18, 0.9), rgba(18, 18, 18, 0.95)), url('logo.jpg') no-repeat center center fixed;
             background-size: cover;
-            color: white; 
-            padding: 15px; 
-            max-width: 600px; 
-            margin: auto; 
+            color: white; padding: 15px; max-width: 600px; margin: auto; 
         }
+        .nav-menu { display: flex; gap: 10px; margin-bottom: 20px; overflow-x: auto; }
+        .nav-menu a { color: white; text-decoration: none; padding: 10px 15px; background: #333; border-radius: 8px; font-weight: bold; white-space: nowrap; }
+        .nav-menu a.active { background: #00d1b2; color: #121212; }
         
-        /* Menu de Navegação Atualizado */
-        .nav-menu { display: flex; gap: 15px; margin-bottom: 20px; justify-content: center;}
-        .nav-menu a { color: white; text-decoration: none; padding: 10px 20px; background: #333; border-radius: 8px; font-weight: bold; transition: 0.2s;}
-        .nav-menu a:hover { filter: brightness(1.2); }
-        .nav-menu a.active { background: var(--primary); color: #121212; }
-
-        .header { text-align: center; margin-bottom: 20px; }
-        h1 { color: var(--primary); margin: 0; }
+        .btn-check { width: 100%; padding: 15px; background: #00d1b2; border: none; border-radius: 10px; color: #121212; font-weight: bold; margin-bottom: 20px; cursor: pointer; }
         
-        /* Painel de Estatísticas */
-        .dashboard { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 30px; }
-        .stat-box { background: var(--card); padding: 15px; border-radius: 12px; text-align: center; border: 1px solid #333; }
-        .stat-box h3 { margin: 0; font-size: 0.9em; color: #888; text-transform: uppercase; }
-        .stat-box p { margin: 10px 0 0 0; font-size: 1.8em; font-weight: bold; }
-        .color-green { color: var(--green); }
-        .color-red { color: var(--red); }
-        
-        /* Lista de Jogos */
-        .match-list { display: flex; flex-direction: column; gap: 15px; }
-        .match-card { background: var(--card); padding: 15px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; border-left: 5px solid #333; }
-        .match-card.Green { border-left-color: var(--green); }
-        .match-card.Red { border-left-color: var(--red); }
-        
-        .info h4 { margin: 0 0 5px 0; font-size: 1.1em; }
-        .info p { margin: 0; color: #aaa; font-size: 0.9em; }
-        .dica { color: var(--primary); font-weight: bold; margin-top: 5px; }
-
-        .actions { display: flex; gap: 10px; }
-        .btn { padding: 10px 15px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 0.9em; transition: 0.2s; }
-        .btn-green { background: rgba(46, 204, 113, 0.2); color: var(--green); border: 1px solid var(--green); }
-        .btn-green:hover { background: var(--green); color: #000; }
-        .btn-red { background: rgba(231, 76, 60, 0.2); color: var(--red); border: 1px solid var(--red); }
-        .btn-red:hover { background: var(--red); color: #fff; }
-        
-        .badge { padding: 8px 15px; border-radius: 6px; font-weight: bold; text-transform: uppercase; font-size: 0.9em; }
-        .badge.Green { background: var(--green); color: #000; }
-        .badge.Red { background: var(--red); color: #fff; }
-
-        @media (max-width: 600px) {
-            .dashboard { grid-template-columns: 1fr 1fr; }
-            .match-card { flex-direction: column; align-items: flex-start; gap: 15px; }
-            .actions { width: 100%; justify-content: stretch; }
-            .btn { flex: 1; }
-            .nav-menu { flex-direction: column; }
-            .nav-menu a { text-align: center; }
-        }
+        .card { background: rgba(30, 30, 30, 0.9); padding: 15px; border-radius: 12px; margin-bottom: 15px; border-left: 5px solid #444; }
+        .green { border-left-color: #2ecc71; }
+        .red { border-left-color: #e74c3c; }
+        .status-badge { float: right; font-size: 0.8em; padding: 3px 8px; border-radius: 4px; background: #444; }
     </style>
 </head>
 <body>
@@ -73,138 +32,87 @@
         <a href="banca.html">Gestão de Banca</a>
     </div>
 
-    <div class="header">
-        <h1>Desempenho do Robô 📊</h1>
-    </div>
+    <h1>Desempenho 📊</h1>
+    <button class="btn-check" id="btnAutoCheck" onclick="verificarResultadosAutomatico()">🤖 Conferir Resultados via API</button>
 
-    <div class="dashboard">
-        <div class="stat-box">
-            <h3>Total Salvo</h3>
-            <p id="stat-total">0</p>
-        </div>
-        <div class="stat-box">
-            <h3>Acertos ✅</h3>
-            <p id="stat-green" class="color-green">0</p>
-        </div>
-        <div class="stat-box">
-            <h3>Erros ❌</h3>
-            <p id="stat-red" class="color-red">0</p>
-        </div>
-        <div class="stat-box">
-            <h3>Taxa de Acerto</h3>
-            <p id="stat-winrate" class="color-green">0%</p>
-        </div>
-    </div>
-
-    <div id="listaJogos" class="match-list">
-        <p style="text-align: center;">Carregando histórico...</p>
-    </div>
+    <div id="listaHistorico"></div>
 
     <script>
-        // --- CONFIGURAÇÕES DO SUPABASE ---
+        const API_KEY = 'b9ba384b106c433686606c4dfa53261a';
+        const BASE_URL = '/api/football';
         const SUPABASE_URL = 'https://tvdwgfytguwlsppvjvkk.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR2ZHdnZnl0Z3V3bHNwcHZqdmtrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY1Njk0OTEsImV4cCI6MjA5MjE0NTQ5MX0.mKbLRjWV3eoeAxUtMX-yY24hZQ-mN0aEtnhxk2pH5Us';
         const clienteSupabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // --- CARREGAR DADOS ---
         async function carregarHistorico() {
-            const { data, error } = await clienteSupabase
-                .from('partidas')
-                .select('*')
-                .order('data_jogo', { ascending: false }); 
-
-            if (error) {
-                console.error(error);
-                document.getElementById('listaJogos').innerHTML = `<p style="color:red; text-align:center;">Erro ao carregar dados.</p>`;
-                return;
-            }
-
-            atualizarDashboard(data);
-            renderizarLista(data);
-        }
-
-        // --- ATUALIZAR NÚMEROS DO PAINEL ---
-        function atualizarDashboard(jogos) {
-            let total = jogos.length;
-            let greens = 0;
-            let reds = 0;
-
-            jogos.forEach(jogo => {
-                if (jogo.status === 'Green') greens++;
-                if (jogo.status === 'Red') reds++;
-            });
-
-            let resolvidos = greens + reds;
-            let winrate = resolvidos > 0 ? Math.round((greens / resolvidos) * 100) : 0;
-
-            document.getElementById('stat-total').innerText = total;
-            document.getElementById('stat-green').innerText = greens;
-            document.getElementById('stat-red').innerText = reds;
+            const div = document.getElementById('listaHistorico');
+            const { data, error } = await clienteSupabase.from('partidas').select('*').order('id', { ascending: false });
             
-            const winrateEl = document.getElementById('stat-winrate');
-            winrateEl.innerText = `${winrate}%`;
-            winrateEl.className = winrate >= 50 ? 'color-green' : 'color-red';
-        }
-
-        // --- MOSTRAR OS JOGOS NA TELA ---
-        function renderizarLista(jogos) {
-            const container = document.getElementById('listaJogos');
-            container.innerHTML = '';
-
-            if (jogos.length === 0) {
-                container.innerHTML = '<p style="text-align:center;">Nenhum jogo salvo ainda. Vá no Radar e salve oportunidades!</p>';
-                return;
-            }
-
-            jogos.forEach(jogo => {
-                const dataFormatada = new Date(jogo.data_jogo).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute:'2-digit'});
-
-                const card = document.createElement('div');
-                card.className = `match-card ${jogo.status || 'Pendente'}`;
-
-                let htmlAcoes = '';
-                
-                if (!jogo.status || jogo.status === 'Pendente') {
-                    htmlAcoes = `
-                        <div class="actions">
-                            <button class="btn btn-green" onclick="marcarResultado('${jogo.id}', 'Green')">✅ Deu Green</button>
-                            <button class="btn btn-red" onclick="marcarResultado('${jogo.id}', 'Red')">❌ Deu Red</button>
+            if (data) {
+                div.innerHTML = '';
+                data.forEach(item => {
+                    const corClasse = item.resultado === 'green' ? 'green' : (item.resultado === 'red' ? 'red' : '');
+                    div.innerHTML += `
+                        <div class="card ${corClasse}">
+                            <span class="status-badge">${item.resultado ? item.resultado.toUpperCase() : 'PENDENTE'}</span>
+                            <strong>${item.time_casa} x ${item.time_fora}</strong><br>
+                            <small>🎯 Sugestão: ${item.sugestao_aposta}</small>
                         </div>
                     `;
-                } else {
-                    htmlAcoes = `<div class="badge ${jogo.status}">${jogo.status}</div>`;
-                }
-
-                card.innerHTML = `
-                    <div class="info">
-                        <h4>${jogo.time_casa} vs ${jogo.time_fora}</h4>
-                        <p>Salvo em: ${dataFormatada}</p>
-                        <div class="dica">💡 Sugestão salva: ${jogo.sugestao_aposta}</div>
-                    </div>
-                    ${htmlAcoes}
-                `;
-
-                container.appendChild(card);
-            });
-        }
-
-        // --- FUNÇÃO PARA ATUALIZAR GREEN/RED NO BANCO ---
-        async function marcarResultado(id, resultado) {
-            const { error } = await clienteSupabase
-                .from('partidas')
-                .update({ status: resultado })
-                .eq('id', id);
-
-            if (error) {
-                alert("Erro ao salvar o resultado. Verifique o console.");
-                console.error(error);
-            } else {
-                carregarHistorico();
+                });
             }
         }
 
-        // Inicia o carregamento assim que a página abre
-        window.onload = carregarHistorico;
+        async function verificarResultadosAutomatico() {
+            const btn = document.getElementById('btnAutoCheck');
+            btn.disabled = true;
+            btn.innerText = '🤖 Acessando API e Conferindo...';
+
+            // 1. Pega jogos pendentes que têm ID da API
+            const { data: pendentes } = await clienteSupabase.from('partidas').select('*').is('resultado', null).not('id_jogo_api', 'is', null);
+
+            if (!pendentes || pendentes.length === 0) {
+                alert("Nenhuma aposta pendente para conferir.");
+                btn.disabled = false;
+                btn.innerText = '🤖 Conferir Resultados via API';
+                return;
+            }
+
+            for (const aposta of pendentes) {
+                try {
+                    const res = await fetch(`${BASE_URL}/matches/${aposta.id_jogo_api}`, {
+                        headers: { 'X-Auth-Token': API_KEY }
+                    });
+                    const jogo = await res.json();
+
+                    if (jogo.status === 'FINISHED') {
+                        const golsCasa = jogo.score.fullTime.home;
+                        const golsFora = jogo.score.fullTime.away;
+                        const totalGols = golsCasa + golsFora;
+                        let deuGreen = false;
+
+                        // Lógica de conferência automática baseada no texto da sugestão
+                        const sug = aposta.sugestao_aposta.toLowerCase();
+                        
+                        if (sug.includes('over 2.5') && totalGols > 2.5) deuGreen = true;
+                        else if (sug.includes('vitória') && sug.includes(aposta.time_casa.toLowerCase()) && golsCasa > golsFora) deuGreen = true;
+                        else if (sug.includes('vitória') && sug.includes(aposta.time_fora.toLowerCase()) && golsFora > golsCasa) deuGreen = true;
+                        else if (sug.includes('ambas marcam') && golsCasa > 0 && golsFora > 0) deuGreen = true;
+                        else if (sug.includes('casa ou empate') && golsCasa >= golsFora) deuGreen = true;
+
+                        const resultadoFinal = deuGreen ? 'green' : 'red';
+
+                        // Atualiza no Banco de Dados
+                        await clienteSupabase.from('partidas').update({ resultado: resultadoFinal }).eq('id', aposta.id);
+                    }
+                } catch (e) { console.error("Erro ao conferir jogo", aposta.id); }
+            }
+
+            alert("Conferência concluída!");
+            location.reload();
+        }
+
+        carregarHistorico();
     </script>
 </body>
 </html>
