@@ -27,11 +27,14 @@
         .btn-check { width: 100%; padding: 15px; background: #00d1b2; border: none; border-radius: 10px; color: #121212; font-weight: bold; margin-bottom: 20px; cursor: pointer; transition: 0.2s; }
         .btn-check:hover { background: #00b39a; }
         
-        .card { background: rgba(30, 30, 30, 0.9); padding: 15px; border-radius: 12px; margin-bottom: 15px; border-left: 5px solid #444; }
+        .card { background: rgba(30, 30, 30, 0.9); padding: 15px; border-radius: 12px; margin-bottom: 15px; border-left: 5px solid #444; position: relative;}
         .green { border-left-color: #2ecc71; }
         .red { border-left-color: #e74c3c; }
-        .status-badge { float: right; font-size: 0.7em; padding: 3px 8px; border-radius: 4px; background: #444; font-weight: bold; }
         
+        .status-badge { float: right; font-size: 0.7em; padding: 3px 8px; border-radius: 4px; background: #444; font-weight: bold; }
+        .data-badge { font-size: 0.75em; color: #aaa; margin-bottom: 5px; display: block; }
+        .placar-box { background: rgba(0,0,0,0.3); padding: 5px 10px; border-radius: 6px; font-weight: bold; color: #00d1b2; margin-top: 10px; display: inline-block; }
+
         select.filtro-mes { width: 100%; padding: 12px; background: #2a2a2a; color: white; border: 1px solid #444; border-radius: 8px; font-size: 1em; margin-bottom: 15px; cursor: pointer; }
     </style>
 </head>
@@ -74,7 +77,7 @@
         let todosOsJogos = [];
 
         async function carregarHistorico() {
-            const { data, error } = await clienteSupabase.from('partidas').select('*').order('id', { ascending: false });
+            const { data } = await clienteSupabase.from('partidas').select('*').order('id', { ascending: false });
             if (data) {
                 todosOsJogos = data;
                 preencherFiltroMes(data);
@@ -85,15 +88,12 @@
         function preencherFiltroMes(data) {
             const select = document.getElementById('filtroMes');
             const mesesUnicos = new Set();
-            
             data.forEach(item => {
                 if (item.created_at) {
                     const dataObj = new Date(item.created_at);
-                    const mesAno = `${dataObj.getFullYear()}-${String(dataObj.getMonth() + 1).padStart(2, '0')}`;
-                    mesesUnicos.add(mesAno);
+                    mesesUnicos.add(`${dataObj.getFullYear()}-${String(dataObj.getMonth() + 1).padStart(2, '0')}`);
                 }
             });
-
             Array.from(mesesUnicos).sort().reverse().forEach(mesAno => {
                 const [ano, mes] = mesAno.split('-');
                 const nomeMes = new Date(ano, mes - 1).toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
@@ -118,57 +118,36 @@
                 jogosFiltrados = todosOsJogos.filter(item => item.created_at && item.created_at.startsWith(mesSelecionado));
             }
 
-            // LOOP 1: CÁLCULOS MATEMÁTICOS (Na ordem real para manter a lógica do Streak e Dash)
-            jogosFiltrados.forEach(item => {
-                if (item.resultado === 'green') greens++;
-                if (item.resultado === 'red') reds++;
-                if (item.resultado === 'green' || item.resultado === 'red') total++;
-
+            // Cálculos matemáticos na ordem cronológica (para Streak)
+            jogosFiltrados.slice().reverse().forEach(item => {
+                if (item.resultado === 'green') { greens++; total++; if(contandoStreak) streak++; }
+                else if (item.resultado === 'red') { reds++; total++; contandoStreak = false; streak = 0; }
+                
                 if (item.resultado) {
-                    if (contandoStreak) {
-                        if (item.resultado === 'green') streak++;
-                        else if (item.resultado === 'red') contandoStreak = false;
-                    }
                     let sug = item.sugestao_aposta || '';
-                    let tipo = '';
-                    if (sug.includes('Over 2.5')) tipo = 'Over 2.5';
-                    else if (sug.includes('Ambas Marcam')) tipo = 'Ambas Marcam';
-                    else if (sug.includes('Dupla Chance')) tipo = 'Dupla Chance';
-                    else if (sug.includes('Vitória') && sug.includes(item.time_casa)) tipo = 'Vitória Casa';
-                    else if (sug.includes('Vitória') && sug.includes(item.time_fora)) tipo = 'Vitória Fora';
-                    if (tipo) { mercados[tipo].total++; if (item.resultado === 'green') mercados[tipo].greens++; }
+                    let tipo = sug.includes('Over 2.5') ? 'Over 2.5' : sug.includes('Ambas') ? 'Ambas Marcam' : sug.includes('Dupla') ? 'Dupla Chance' : sug.includes(item.time_casa) ? 'Vitória Casa' : 'Vitória Fora';
+                    if (mercados[tipo]) { mercados[tipo].total++; if (item.resultado === 'green') mercados[tipo].greens++; }
                 }
             });
 
-            // LOOP 2: ORDENAÇÃO VISUAL DA LISTA (Pendente > Green > Red)
-            let jogosParaRenderizar = [...jogosFiltrados];
-            jogosParaRenderizar.sort((a, b) => {
-                // Definindo os "Pesos" para a ordem
-                const getPeso = (res) => {
-                    if (!res) return 0;       // Pendente vai para o topo
-                    if (res === 'green') return 1; // Green vem em seguida
-                    if (res === 'red') return 2;   // Red fica por último
-                    return 3;
-                };
-
-                const pesoA = getPeso(a.resultado);
-                const pesoB = getPeso(b.resultado);
-
-                // Se as categorias forem diferentes, ordena pela categoria
-                if (pesoA !== pesoB) return pesoA - pesoB;
-                
-                // Se for a mesma categoria (ex: dois pendentes), o mais recente ganha
-                return b.id - a.id; 
+            // Ordenação Visual: Pendente (0) -> Green (1) -> Red (2) + Sub-ordem ID Decrescente
+            let listaVisual = [...jogosFiltrados].sort((a, b) => {
+                const peso = (r) => r === 'green' ? 1 : r === 'red' ? 2 : 0;
+                if (peso(a.resultado) !== peso(b.resultado)) return peso(a.resultado) - peso(b.resultado);
+                return b.id - a.id;
             });
 
-            // LOOP 3: IMPRIMIR NA TELA
-            jogosParaRenderizar.forEach(item => {
+            listaVisual.forEach(item => {
                 const corClasse = item.resultado === 'green' ? 'green' : (item.resultado === 'red' ? 'red' : '');
+                const dataFormatada = new Date(item.created_at).toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'});
+                
                 div.innerHTML += `
                     <div class="card ${corClasse}">
                         <span class="status-badge">${item.resultado ? item.resultado.toUpperCase() : 'PENDENTE'}</span>
+                        <span class="data-badge">📅 ${dataFormatada}</span>
                         <strong>${item.time_casa} x ${item.time_fora}</strong><br>
                         <small>🎯 Sugestão: ${item.sugestao_aposta}</small>
+                        ${item.placar ? `<br><div class="placar-box">Placar: ${item.placar}</div>` : ''}
                     </div>
                 `;
             });
@@ -178,49 +157,50 @@
             document.getElementById('dashRed').innerText = reds;
             const taxa = total > 0 ? Math.round((greens / total) * 100) : 0;
             document.getElementById('dashTaxa').innerText = `${taxa}%`;
-            if(taxa < 50 && total > 0) document.getElementById('dashTaxa').style.color = '#e74c3c';
-            else if(taxa >= 70) document.getElementById('dashTaxa').style.color = '#2ecc71';
-            else document.getElementById('dashTaxa').style.color = '#00d1b2';
-
             document.getElementById('dashStreak').innerText = `${streak} 🔥`;
-
-            let melhorMercado = 'Nenhum'; let melhorTaxa = -1;
-            for (const [nome, stats] of Object.entries(mercados)) {
-                if (stats.greens > 0) {
-                    let taxaMercado = (stats.greens / stats.total) * 100;
-                    if (taxaMercado > melhorTaxa) { melhorTaxa = taxaMercado; melhorMercado = nome; }
-                }
+            
+            let melhorM = 'Nenhum', maxT = -1;
+            for (const [n, s] of Object.entries(mercados)) {
+                let t = s.total > 0 ? (s.greens / s.total) * 100 : -1;
+                if (t > maxT) { maxT = t; melhorM = n; }
             }
-            document.getElementById('dashMercado').innerText = melhorTaxa > -1 ? `${melhorMercado} (${Math.round(melhorTaxa)}%)` : `Aguardando Dados`;
+            document.getElementById('dashMercado').innerText = maxT > -1 ? `${melhorM} (${Math.round(maxT)}%)` : `---`;
         }
 
         async function verificarResultadosAutomatico() {
             const btn = document.getElementById('btnAutoCheck');
-            btn.disabled = true;
-            btn.innerText = '🤖 Conferindo Resultados...';
+            btn.disabled = true; btn.innerText = '🤖 Conferindo...';
+
             const { data: pendentes } = await clienteSupabase.from('partidas').select('*').is('resultado', null).not('id_jogo_api', 'is', null);
-            if (!pendentes || pendentes.length === 0) { alert("Nenhuma aposta pendente com ID da API encontrada."); btn.disabled = false; btn.innerText = '🤖 Conferir Resultados via API'; return; }
+            if (!pendentes || pendentes.length === 0) { alert("Nenhum pendente."); btn.disabled = false; btn.innerText = '🤖 Conferir Resultados via API'; return; }
 
             for (const aposta of pendentes) {
                 try {
                     const res = await fetch(`${BASE_URL}/matches/${aposta.id_jogo_api}`, { headers: { 'X-Auth-Token': API_KEY } });
                     const jogo = await res.json();
                     if (jogo.status === 'FINISHED') {
-                        const golsCasa = jogo.score.fullTime.home; const golsFora = jogo.score.fullTime.away; const totalGols = golsCasa + golsFora;
-                        let deuGreen = false; const sug = aposta.sugestao_aposta.toLowerCase();
-                        if (sug.includes('over 2.5') && totalGols > 2.5) deuGreen = true;
-                        else if (sug.includes('vitória') && sug.includes(aposta.time_casa.toLowerCase()) && golsCasa > golsFora) deuGreen = true;
-                        else if (sug.includes('vitória') && sug.includes(aposta.time_fora.toLowerCase()) && golsFora > golsCasa) deuGreen = true;
-                        else if (sug.includes('ambas marcam') && golsCasa > 0 && golsFora > 0) deuGreen = true;
-                        else if (sug.includes('casa ou empate') && golsCasa >= golsFora) deuGreen = true;
-                        const resultadoFinal = deuGreen ? 'green' : 'red';
-                        await clienteSupabase.from('partidas').update({ resultado: resultadoFinal }).eq('id', aposta.id);
-                    }
-                } catch (e) { console.error("Erro no jogo", aposta.id); }
-            }
-            alert("Sincronização concluída!"); location.reload();
-        }
+                        const h = jogo.score.fullTime.home;
+                        const a = jogo.score.fullTime.away;
+                        const placarString = `${h} x ${a}`;
+                        const total = h + a;
+                        let deu = false;
+                        const s = aposta.sugestao_aposta.toLowerCase();
 
+                        if (s.includes('over 2.5') && total > 2.5) deu = true;
+                        else if (s.includes('vitória') && s.includes(aposta.time_casa.toLowerCase()) && h > a) deu = true;
+                        else if (s.includes('vitória') && s.includes(aposta.time_fora.toLowerCase()) && a > h) deu = true;
+                        else if (s.includes('ambas') && h > 0 && a > 0) deu = true;
+                        else if (s.includes('casa ou empate') && h >= a) deu = true;
+
+                        await clienteSupabase.from('partidas').update({ 
+                            resultado: deu ? 'green' : 'red',
+                            placar: placarString 
+                        }).eq('id', aposta.id);
+                    }
+                } catch (e) { console.error(e); }
+            }
+            location.reload();
+        }
         carregarHistorico();
     </script>
 </body>
