@@ -285,8 +285,35 @@
         function fatorial(n) { if (n === 0 || n === 1) return 1; let r = 1; for (let i = 2; i <= n; i++) r *= i; return r; }
 
         async function salvarAposta(casa, fora, pC, pE, pF, sug, idJogoAPI, btn) {
+            btn.disabled = true; // Trava o botão contra clique duplo rápido
+            btn.innerText = "Verificando...";
+
+            // 1. Bate na porta do Supabase e procura esse ID
+            const { data: jogoExistente } = await clienteSupabase
+                .from('partidas')
+                .select('id')
+                .eq('id_jogo_api', idJogoAPI);
+
+            // 2. Se a lista retornar maior que zero, é porque o jogo já está lá!
+            if (jogoExistente && jogoExistente.length > 0) {
+                btn.innerText = "⚠️ Jogo já está no Histórico!";
+                btn.style.background = "var(--orange)";
+                btn.style.color = "#121212";
+                return; // O 'return' mata a função aqui e impede de salvar duplicado
+            }
+
+            // 3. Se passou no teste, salva normalmente
             btn.innerText = "Salvando...";
-            const { error } = await clienteSupabase.from('partidas').insert([{ time_casa: casa, time_fora: fora, prob_vitoria_casa: pC, prob_empate: pE, prob_vitoria_fora: pF, sugestao_aposta: sug, id_jogo_api: idJogoAPI }]);
+            const { error } = await clienteSupabase.from('partidas').insert([{ 
+                time_casa: casa, 
+                time_fora: fora, 
+                prob_vitoria_casa: pC, 
+                prob_empate: pE, 
+                prob_vitoria_fora: pF, 
+                sugestao_aposta: sug, 
+                id_jogo_api: idJogoAPI 
+            }]);
+
             if (!error) { 
                 btn.innerText = "Salvo com Sucesso! ✅"; 
                 btn.style.background = "var(--green)"; 
@@ -294,6 +321,7 @@
             } else { 
                 btn.innerText = `Erro: ${error.message}`; 
                 btn.style.background = "var(--red)"; 
+                btn.disabled = false; // Libera o botão de novo caso dê erro de internet
             }
         }
     </script>
