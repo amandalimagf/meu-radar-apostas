@@ -71,14 +71,14 @@
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR2ZHdnZnl0Z3V3bHNwcHZqdmtrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY1Njk0OTEsImV4cCI6MjA5MjE0NTQ5MX0.mKbLRjWV3eoeAxUtMX-yY24hZQ-mN0aEtnhxk2pH5Us';
         const clienteSupabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        let todosOsJogos = []; // Vai guardar tudo para não precisar ir no banco toda hora
+        let todosOsJogos = [];
 
         async function carregarHistorico() {
             const { data, error } = await clienteSupabase.from('partidas').select('*').order('id', { ascending: false });
             if (data) {
                 todosOsJogos = data;
                 preencherFiltroMes(data);
-                renderizarTela(); // Desenha a tela inicial
+                renderizarTela();
             }
         }
 
@@ -113,12 +113,12 @@
             let contandoStreak = true;
             let mercados = { 'Over 2.5': { total: 0, greens: 0 }, 'Ambas Marcam': { total: 0, greens: 0 }, 'Dupla Chance': { total: 0, greens: 0 }, 'Vitória Casa': { total: 0, greens: 0 }, 'Vitória Fora': { total: 0, greens: 0 } };
 
-            // Filtrando os jogos pelo mês selecionado
             let jogosFiltrados = todosOsJogos;
             if (mesSelecionado !== 'todos') {
                 jogosFiltrados = todosOsJogos.filter(item => item.created_at && item.created_at.startsWith(mesSelecionado));
             }
 
+            // LOOP 1: CÁLCULOS MATEMÁTICOS (Na ordem real para manter a lógica do Streak e Dash)
             jogosFiltrados.forEach(item => {
                 if (item.resultado === 'green') greens++;
                 if (item.resultado === 'red') reds++;
@@ -138,7 +138,31 @@
                     else if (sug.includes('Vitória') && sug.includes(item.time_fora)) tipo = 'Vitória Fora';
                     if (tipo) { mercados[tipo].total++; if (item.resultado === 'green') mercados[tipo].greens++; }
                 }
+            });
 
+            // LOOP 2: ORDENAÇÃO VISUAL DA LISTA (Pendente > Green > Red)
+            let jogosParaRenderizar = [...jogosFiltrados];
+            jogosParaRenderizar.sort((a, b) => {
+                // Definindo os "Pesos" para a ordem
+                const getPeso = (res) => {
+                    if (!res) return 0;       // Pendente vai para o topo
+                    if (res === 'green') return 1; // Green vem em seguida
+                    if (res === 'red') return 2;   // Red fica por último
+                    return 3;
+                };
+
+                const pesoA = getPeso(a.resultado);
+                const pesoB = getPeso(b.resultado);
+
+                // Se as categorias forem diferentes, ordena pela categoria
+                if (pesoA !== pesoB) return pesoA - pesoB;
+                
+                // Se for a mesma categoria (ex: dois pendentes), o mais recente ganha
+                return b.id - a.id; 
+            });
+
+            // LOOP 3: IMPRIMIR NA TELA
+            jogosParaRenderizar.forEach(item => {
                 const corClasse = item.resultado === 'green' ? 'green' : (item.resultado === 'red' ? 'red' : '');
                 div.innerHTML += `
                     <div class="card ${corClasse}">
