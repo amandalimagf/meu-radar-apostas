@@ -89,9 +89,12 @@
             const select = document.getElementById('filtroMes');
             const mesesUnicos = new Set();
             data.forEach(item => {
-                if (item.created_at) {
-                    const dataObj = new Date(item.created_at);
-                    mesesUnicos.add(`${dataObj.getFullYear()}-${String(dataObj.getMonth() + 1).padStart(2, '0')}`);
+                // Lendo da coluna data_jogo
+                if (item.data_jogo) {
+                    const dataObj = new Date(item.data_jogo);
+                    if (!isNaN(dataObj)) {
+                        mesesUnicos.add(`${dataObj.getFullYear()}-${String(dataObj.getMonth() + 1).padStart(2, '0')}`);
+                    }
                 }
             });
             Array.from(mesesUnicos).sort().reverse().forEach(mesAno => {
@@ -115,10 +118,11 @@
 
             let jogosFiltrados = todosOsJogos;
             if (mesSelecionado !== 'todos') {
-                jogosFiltrados = todosOsJogos.filter(item => item.created_at && item.created_at.startsWith(mesSelecionado));
+                // Filtrando usando a coluna data_jogo
+                jogosFiltrados = todosOsJogos.filter(item => item.data_jogo && item.data_jogo.startsWith(mesSelecionado));
             }
 
-            // Cálculos matemáticos na ordem cronológica (para Streak)
+            // Cálculos matemáticos
             jogosFiltrados.slice().reverse().forEach(item => {
                 if (item.resultado === 'green') { greens++; total++; if(contandoStreak) streak++; }
                 else if (item.resultado === 'red') { reds++; total++; contandoStreak = false; streak = 0; }
@@ -130,7 +134,7 @@
                 }
             });
 
-            // Ordenação Visual: Pendente (0) -> Green (1) -> Red (2) + Sub-ordem ID Decrescente
+            // Ordenação Visual
             let listaVisual = [...jogosFiltrados].sort((a, b) => {
                 const peso = (r) => r === 'green' ? 1 : r === 'red' ? 2 : 0;
                 if (peso(a.resultado) !== peso(b.resultado)) return peso(a.resultado) - peso(b.resultado);
@@ -139,8 +143,16 @@
 
             listaVisual.forEach(item => {
                 const corClasse = item.resultado === 'green' ? 'green' : (item.resultado === 'red' ? 'red' : '');
-                const dataFormatada = new Date(item.created_at).toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'});
                 
+                // Lendo a data da coluna certa e aplicando a trava de segurança
+                let dataFormatada = "Data não disponível";
+                if (item.data_jogo) {
+                    const dataObj = new Date(item.data_jogo);
+                    if (!isNaN(dataObj)) {
+                        dataFormatada = dataObj.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'});
+                    }
+                }
+
                 div.innerHTML += `
                     <div class="card ${corClasse}">
                         <span class="status-badge">${item.resultado ? item.resultado.toUpperCase() : 'PENDENTE'}</span>
