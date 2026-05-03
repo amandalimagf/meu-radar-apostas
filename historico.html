@@ -89,7 +89,6 @@
             const select = document.getElementById('filtroMes');
             const mesesUnicos = new Set();
             data.forEach(item => {
-                // Lendo da coluna data_jogo
                 if (item.data_jogo) {
                     const dataObj = new Date(item.data_jogo);
                     if (!isNaN(dataObj)) {
@@ -118,7 +117,6 @@
 
             let jogosFiltrados = todosOsJogos;
             if (mesSelecionado !== 'todos') {
-                // Filtrando usando a coluna data_jogo
                 jogosFiltrados = todosOsJogos.filter(item => item.data_jogo && item.data_jogo.startsWith(mesSelecionado));
             }
 
@@ -134,17 +132,25 @@
                 }
             });
 
-            // Ordenação Visual
+            // Ordenação Visual Perfeita: Status -> Data (Mais recente para a mais antiga)
             let listaVisual = [...jogosFiltrados].sort((a, b) => {
+                // 1. Ordem primária: Pendente (0) -> Green (1) -> Red (2)
                 const peso = (r) => r === 'green' ? 1 : r === 'red' ? 2 : 0;
-                if (peso(a.resultado) !== peso(b.resultado)) return peso(a.resultado) - peso(b.resultado);
-                return b.id - a.id;
+                if (peso(a.resultado) !== peso(b.resultado)) {
+                    return peso(a.resultado) - peso(b.resultado);
+                }
+                
+                // 2. Ordem secundária (dentro do mesmo grupo): Data_jogo (Mais recente primeiro)
+                const dataTempoA = a.data_jogo ? new Date(a.data_jogo).getTime() : 0;
+                const dataTempoB = b.data_jogo ? new Date(b.data_jogo).getTime() : 0;
+                
+                // Retornando (B - A) faz com que o maior número de milissegundos (a data mais no futuro/recente) venha primeiro.
+                return dataTempoB - dataTempoA;
             });
 
             listaVisual.forEach(item => {
                 const corClasse = item.resultado === 'green' ? 'green' : (item.resultado === 'red' ? 'red' : '');
                 
-                // Lendo a data da coluna certa e aplicando a trava de segurança
                 let dataFormatada = "Data não disponível";
                 if (item.data_jogo) {
                     const dataObj = new Date(item.data_jogo);
