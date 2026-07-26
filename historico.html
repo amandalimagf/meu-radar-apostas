@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Victor Tips - Histórico Profissional</title>
-    <!-- Bibliotecas: Supabase e Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -48,10 +47,12 @@
 
         select.filtro-mes { width: 100%; padding: 12px; background: #2a2a2a; color: white; border: 1px solid #444; border-radius: 8px; font-size: 1em; margin-bottom: 15px; cursor: pointer; }
 
-        /* Estilos dos Gráficos */
+        /* Estilos dos Gráficos Corrigidos */
         .graficos-container { display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px; }
         .grafico-box { background: rgba(30, 30, 30, 0.9); padding: 15px; border-radius: 8px; border: 1px solid #333; }
-        .grafico-titulo { text-align: center; font-size: 0.85em; color: #aaa; margin-bottom: 10px; font-weight: bold; text-transform: uppercase; }
+        .grafico-titulo { text-align: center; font-size: 0.85em; color: #aaa; margin-bottom: 15px; font-weight: bold; text-transform: uppercase; }
+        /* Adicionámos um wrapper para controlar o tamanho exato do gráfico */
+        .grafico-wrapper { position: relative; height: 260px; width: 100%; display: flex; justify-content: center; }
 
         /* Estilos do Toast (Notificação) */
         #toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
@@ -95,11 +96,12 @@
         <div class="dash-item" style="border-color: #ff4757;"><div class="dash-label" style="color: #ff4757;">🔥 Sequência Atual</div><div id="dashStreak" class="dash-valor" style="font-size: 1.1em;">0</div></div>
     </div>
 
-    <!-- Container do Gráfico (Apenas a Pizza agora) -->
     <div class="graficos-container">
         <div class="grafico-box">
             <div class="grafico-titulo">Distribuição de Mercados</div>
-            <canvas id="graficoMercados" height="150"></canvas>
+            <div class="grafico-wrapper">
+                <canvas id="graficoMercados"></canvas>
+            </div>
         </div>
     </div>
 
@@ -108,7 +110,6 @@
     <div id="listaHistorico"></div>
     <button class="btn-carregar-mais" id="btnCarregarMais" onclick="carregarMaisJogos()">⏬ Carregar Mais Antigos</button>
 
-    <!-- Container para os Alertas Bonitos -->
     <div id="toast-container"></div>
 
     <script>
@@ -121,14 +122,10 @@
         let todosOsJogos = [];
         let statusFiltroAtual = 'todos'; 
         
-        // Variáveis de Paginação
         let paginaAtual = 1;
         const itensPorPagina = 20;
-
-        // Variável do Gráfico
         let graficoMercadosRef = null;
 
-        // --- SISTEMA DE TOAST (ALERTAS) ---
         function mostrarToast(mensagem, tipo = 'info') {
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
@@ -139,7 +136,6 @@
             container.appendChild(toast);
             
             setTimeout(() => { toast.classList.add('show'); }, 10); 
-            
             setTimeout(() => {
                 toast.classList.remove('show');
                 setTimeout(() => { toast.remove(); }, 300); 
@@ -214,7 +210,6 @@
                 jogosFiltradosMes = todosOsJogos.filter(item => item.data_jogo && item.data_jogo.startsWith(mesSelecionado));
             }
 
-            // Cálculos gerais
             jogosFiltradosMes.slice().reverse().forEach(item => {
                 if (item.resultado === 'green') { greens++; total++; if(contandoStreak) streak++; }
                 else if (item.resultado === 'red') { reds++; total++; contandoStreak = false; streak = 0; }
@@ -226,13 +221,11 @@
                 }
             });
 
-            // Aplica filtro de Green/Red na lista
             let listaVisual = jogosFiltradosMes;
             if (statusFiltroAtual !== 'todos') {
                 listaVisual = jogosFiltradosMes.filter(item => item.resultado === statusFiltroAtual);
             }
 
-            // Ordenação Visual: Status -> Data
             listaVisual = [...listaVisual].sort((a, b) => {
                 const peso = (r) => r === 'green' ? 1 : r === 'red' ? 2 : 0;
                 if (peso(a.resultado) !== peso(b.resultado)) return peso(a.resultado) - peso(b.resultado);
@@ -241,7 +234,6 @@
                 return dataTempoB - dataTempoA;
             });
 
-            // --- PAGINAÇÃO ---
             const itensExibidos = listaVisual.slice(0, paginaAtual * itensPorPagina);
             const btnCarregarMais = document.getElementById('btnCarregarMais');
             
@@ -272,7 +264,6 @@
             });
 
             if (recalcularTudo) {
-                // Atualiza Painéis
                 document.getElementById('dashTotal').innerText = total;
                 document.getElementById('dashGreen').innerText = greens;
                 document.getElementById('dashRed').innerText = reds;
@@ -287,16 +278,14 @@
                 }
                 document.getElementById('dashMercado').innerText = maxT > -1 ? `${melhorM} (${Math.round(maxT)}%)` : `---`;
 
-                // Renderiza Gráfico
                 desenharGraficos(mercados);
             }
         }
 
         function desenharGraficos(mercados) {
-            Chart.defaults.color = '#fff';
+            Chart.defaults.color = '#ccc';
             Chart.defaults.font.family = "'Segoe UI', sans-serif";
 
-            // Gráfico de Mercados (Rosquinha)
             const ctxMercados = document.getElementById('graficoMercados').getContext('2d');
             if (graficoMercadosRef) graficoMercadosRef.destroy();
 
@@ -313,14 +302,28 @@
                         borderWidth: 0
                     }]
                 },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { boxWidth: 12 } } } }
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false,
+                    cutout: '65%', // Deixa a "rosquinha" mais fina e elegante
+                    plugins: { 
+                        legend: { 
+                            position: 'bottom', // Move a legenda para o fundo, evitando espremer o gráfico
+                            labels: { 
+                                boxWidth: 12,
+                                padding: 15,
+                                font: { size: 11 }
+                            } 
+                        } 
+                    } 
+                }
             });
         }
 
         async function verificarResultadosAutomatico() {
             const btn = document.getElementById('btnAutoCheck');
-            btn.disabled = true; btn.innerText = '🤖 Conferindo...';
-            mostrarToast('Buscando resultados na API...', 'info');
+            btn.disabled = true; btn.innerText = '🤖 A verificar...';
+            mostrarToast('A procurar resultados na API...', 'info');
 
             const { data: pendentes } = await clienteSupabase.from('partidas').select('*').is('resultado', null).not('id_jogo_api', 'is', null);
             
@@ -362,7 +365,7 @@
             }
             
             if (conferidos > 0) {
-                mostrarToast(`${conferidos} jogo(s) atualizado(s)! Recarregando...`, 'success');
+                mostrarToast(`${conferidos} jogo(s) atualizado(s)! A recarregar...`, 'success');
                 setTimeout(() => { location.reload(); }, 2000);
             } else {
                 mostrarToast('Nenhum jogo foi finalizado ainda.', 'info');
