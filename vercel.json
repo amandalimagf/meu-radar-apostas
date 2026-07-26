@@ -1,8 +1,14 @@
 {
   "rewrites": [
     {
-      "source": "/api/football/:path*",
-      "destination": "https://api.football-data.org/v4/:path*"
+      "source": "/api/football/:match*",
+      "destination": "https://api.football-data.org/v4/:match*"
+    }
+  ],
+  "crons": [
+    {
+      "path": "/api/conferir",
+      "schedule": "0 8 * * *"
     }
   ]
 }
