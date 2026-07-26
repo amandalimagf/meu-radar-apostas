@@ -6,9 +6,10 @@
     <title>Victor Tips - Radar Pro</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
+        :root { --primary: #00d1b2; --bg: #121212; --card: #1e1e1e; --green: #2ecc71; --orange: #f39c12; --red: #e74c3c; --gold: #ffd700; }
         body { 
-            font-family: 'Segoe UI', sans-serif; 
-            background: linear-gradient(rgba(18, 18, 18, 0.9), rgba(18, 18, 18, 0.95)), url('logo.jpg') no-repeat center center fixed;
+            font-family: 'Segoe UI', Tahoma, sans-serif; 
+            background: linear-gradient(rgba(18, 18, 18, 0.85), rgba(18, 18, 18, 0.95)), url('logo.jpg') no-repeat center center fixed;
             background-size: cover;
             color: white; 
             padding: 15px; 
@@ -16,23 +17,48 @@
             margin: auto; 
         }
         
-        /* Menu de Navegação */
-        .nav-menu { display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; overflow-x: auto; }
+        .nav-menu { display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; overflow-x: auto; padding-bottom: 10px; }
         .nav-menu a { color: white; text-decoration: none; padding: 10px 15px; background: #333; border-radius: 8px; font-weight: bold; white-space: nowrap; transition: 0.2s; }
-        .nav-menu a.active { background: #00d1b2; color: #121212; }
-        .nav-menu a:hover:not(.active) { background: #444; }
+        .nav-menu a.active { background: var(--primary); color: #121212; }
 
-        h1 { text-align: center; color: #00d1b2; margin-bottom: 20px; }
+        .header { text-align: center; margin-bottom: 20px; }
+        h1 { color: var(--primary); margin: 0; font-size: 1.8em; }
+        p { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+        
+        .filter-container { background: var(--card); padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #333; }
+        label { display: block; margin-bottom: 8px; font-size: 0.8em; color: #aaa; text-transform: uppercase; font-weight: bold; }
+        select { width: 100%; padding: 12px; background: #2a2a2a; color: white; border: 1px solid #444; border-radius: 8px; font-size: 1em; cursor: pointer; }
 
-        /* Estilo dos Cards de Jogos */
-        .card { background: rgba(30, 30, 30, 0.9); padding: 15px; border-radius: 12px; margin-bottom: 15px; border-left: 5px solid #00d1b2; }
-        .data-badge { font-size: 0.75em; color: #aaa; margin-bottom: 5px; display: block; }
-        .times { font-size: 1.1em; font-weight: bold; margin-bottom: 10px; }
-        .sugestao-box { background: rgba(0, 209, 178, 0.1); padding: 10px; border-radius: 6px; border: 1px dashed #00d1b2; margin-bottom: 15px; }
-        .btn-salvar { width: 100%; padding: 12px; background: #00d1b2; border: none; border-radius: 8px; color: #121212; font-weight: bold; cursor: pointer; transition: 0.2s; }
-        .btn-salvar:hover { background: #00b39a; transform: translateY(-2px); }
+        .btn-scan { width: 100%; padding: 16px; background: var(--primary); border: none; border-radius: 10px; color: #121212; font-weight: bold; font-size: 1.1em; cursor: pointer; transition: 0.2s; }
+        .btn-scan:disabled { background: #555; color: #888; cursor: not-allowed; }
 
-        /* --- SISTEMA DE TOAST (NOTIFICAÇÕES) --- */
+        .resultados { margin-top: 20px; display: flex; flex-direction: column; gap: 15px; }
+        .match-card { background: var(--card); padding: 15px; border-radius: 12px; border-left: 4px solid var(--primary); }
+        
+        .liga-tag { font-size: 0.7em; color: var(--primary); background: rgba(0,209,178,0.1); padding: 4px 8px; border-radius: 4px; display: inline-block; margin-bottom: 10px; font-weight: bold; }
+        .confronto { font-size: 1.1em; font-weight: bold; display: flex; justify-content: space-between; margin-bottom: 15px; align-items: center; }
+        .time { flex: 1; text-align: center; }
+        
+        .btn-analisar { width: 100%; padding: 12px; background: #2a2a2a; color: var(--primary); border: 1px solid var(--primary); border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        .btn-analisar:hover { background: var(--primary); color: #121212; }
+        .btn-analisar:disabled { border-color: #555; color: #888; }
+
+        .painel-analise { display: none; margin-top: 15px; border-top: 1px solid #333; padding-top: 15px;}
+        
+        .prob-bar-container { display: flex; height: 10px; border-radius: 5px; overflow: hidden; background: #333; margin-bottom: 5px; }
+        .prob-bar { height: 100%; }
+        .stats { display: flex; justify-content: space-between; font-size: 0.85em; color: #ccc; margin-bottom: 15px; font-weight: bold;}
+        
+        .market-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+        .market-item { background: #252525; padding: 10px; border-radius: 8px; font-size: 0.85em; border: 1px solid #333; }
+        .market-item span { display: block; }
+        .market-item span:first-child { color: #aaa; margin-bottom: 4px; font-size: 0.9em; }
+        .market-item span:last-child { color: var(--primary); font-weight: bold; font-size: 1.1em; }
+
+        .sugestao { padding: 12px; border-radius: 8px; font-size: 1em; text-align: center; margin-bottom: 15px; transition: 0.3s; }
+        .btn-save { width: 100%; padding: 12px; background: #333; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
+
+        /* Estilos do Toast (Notificação) */
         #toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
         .toast { padding: 12px 20px; border-radius: 8px; color: white; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.3); transform: translateX(120%); transition: transform 0.3s ease-in-out; display: flex; align-items: center; gap: 10px; font-family: 'Segoe UI', sans-serif;}
         .toast.show { transform: translateX(0); }
@@ -48,21 +74,41 @@
         <a href="historico.html">Meu Histórico</a>
     </div>
 
-    <h1>Radar de Análises 🎯</h1>
+    <div class="header">
+        <h1>Victor Tips 🎯</h1>
+        <p>Estatísticas puxadas da Tabela de Classificação Real</p>
+    </div>
 
-    <!-- Container onde os jogos da API vão aparecer -->
-    <div id="listaJogosDia"></div>
+    <div class="filter-container">
+        <label>Ligas Garantidas (Dados Reais)</label>
+        <select id="filtroLiga">
+            <option value="BSA">🇧🇷 Brasileirão Série A</option>
+            <option value="PL">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League</option>
+            <option value="ELC">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Championship (ING 2)</option>
+            <option value="PD">🇪🇸 La Liga</option>
+            <option value="BL1">🇩🇪 Bundesliga</option>
+            <option value="SA">🇮🇹 Serie A (Itália)</option>
+            <option value="FL1">🇫🇷 Ligue 1</option>
+            <option value="PPL">🇵🇹 Primeira Liga</option>
+            <option value="DED">🇳🇱 Eredivisie (Holanda)</option>
+            <option value="CL">⭐ Champions League</option>
+        </select>
+    </div>
 
-    <!-- Container obrigatório para os Alertas Bonitos -->
+    <button id="btnEscanear" class="btn-scan" onclick="buscarJogos()">Carregar Jogos de Hoje</button>
+
+    <div id="listaResultados" class="resultados"></div>
+
     <div id="toast-container"></div>
 
     <script>
-        // Configurações do Supabase (Mantenha as suas chaves intactas)
+        const API_KEY = 'b9ba384b106c433686606c4dfa53261a'; 
+        const BASE_URL = '/api/football';
         const SUPABASE_URL = 'https://tvdwgfytguwlsppvjvkk.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR2ZHdnZnl0Z3V3bHNwcHZqdmtrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY1Njk0OTEsImV4cCI6MjA5MjE0NTQ5MX0.mKbLRjWV3eoeAxUtMX-yY24hZQ-mN0aEtnhxk2pH5Us';
         const clienteSupabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // --- FUNÇÃO DO TOAST (SUBSTITUI OS ALERTS) ---
+        // --- FUNÇÃO DO TOAST (ALERTAS) ---
         function mostrarToast(mensagem, tipo = 'info') {
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
@@ -72,96 +118,246 @@
             
             container.appendChild(toast);
             
-            // Animação de entrada
             setTimeout(() => { toast.classList.add('show'); }, 10);
             
-            // Tempo para sumir (3 segundos)
             setTimeout(() => {
                 toast.classList.remove('show');
-                setTimeout(() => { toast.remove(); }, 300); // Remove do HTML
+                setTimeout(() => { toast.remove(); }, 300);
             }, 3000);
         }
 
-        // --- FUNÇÃO PARA SALVAR O JOGO NO HISTÓRICO COM TRAVA DE SEGURANÇA ---
-        async function salvarJogo(idJogoApi, timeCasa, timeFora, sugestaoAposta, dataJogo) {
+        async function buscarJogos() {
+            const btn = document.getElementById('btnEscanear');
+            const divResultados = document.getElementById('listaResultados');
+            const ligaId = document.getElementById('filtroLiga').value;
             
-            mostrarToast('Processando...', 'info');
+            btn.disabled = true;
+            btn.innerText = 'Consultando Jogos Reais...';
+            divResultados.innerHTML = '';
 
             try {
-                // 1. TRAVA DE SEGURANÇA: Verifica se o jogo já existe no banco
+                const dataHoje = new Date();
+                const hoje = dataHoje.toLocaleDateString('en-CA'); 
+                const dataFim = new Date(dataHoje);
+                dataFim.setDate(dataFim.getDate() + 3);
+                const futuro = dataFim.toLocaleDateString('en-CA');
+                
+                const res = await fetch(`${BASE_URL}/matches?competitions=${ligaId}&dateFrom=${hoje}&dateTo=${futuro}`, {
+                    method: 'GET',
+                    headers: { 'X-Auth-Token': API_KEY }
+                });
+                
+                const data = await res.json();
+
+                if (data.errorCode) {
+                    divResultados.innerHTML = `<p style="color:var(--orange); text-align:center;">Erro da API: ${data.message}</p>`;
+                    return;
+                }
+
+                const jogos = data.matches;
+
+                if (!jogos || jogos.length === 0) {
+                    divResultados.innerHTML = `<p style="text-align:center; padding: 20px; background: #252525; border-radius: 8px;">Nenhum jogo agendado nesta liga para os próximos 3 dias.</p>`;
+                } else {
+                    jogos.forEach(jogo => renderizarCard(jogo, ligaId));
+                }
+            } catch (error) {
+                divResultados.innerHTML = `<p style="color:red; text-align:center;">Erro de conexão. Lembre-se de acessar pelo link da Vercel!</p>`;
+            } finally {
+                btn.disabled = false;
+                btn.innerText = 'Atualizar Lista de Jogos';
+            }
+        }
+
+        function renderizarCard(jogo, ligaId) {
+            const timeCasa = jogo.homeTeam.shortName || jogo.homeTeam.name;
+            const timeFora = jogo.awayTeam.shortName || jogo.awayTeam.name;
+            const idCasa = jogo.homeTeam.id;
+            const idFora = jogo.awayTeam.id;
+            const idJogoAPI = jogo.id; 
+            
+            const dataJogo = new Date(jogo.utcDate);
+            const diaMes = dataJogo.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+            const hora = dataJogo.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+            
+            let infoTempo = `${diaMes} às ${hora}`;
+            if (jogo.status === 'IN_PLAY') infoTempo = '🔴 AO VIVO';
+            if (jogo.status === 'FINISHED') infoTempo = `Encerrado (${diaMes})`;
+            if (jogo.status === 'PAUSED') infoTempo = '⏸️ INTERVALO';
+            
+            const idCard = `jogo_${jogo.id}`;
+            const card = document.createElement('div');
+            card.className = 'match-card';
+            card.id = idCard;
+            
+            card.innerHTML = `
+                <div class="liga-tag">${jogo.competition.name} • 🗓️ ${infoTempo}</div>
+                <div class="confronto">
+                    <span class="time" style="color:var(--green)">${timeCasa}</span>
+                    <span style="color:#666; font-size: 0.8em; padding: 0 10px;">X</span>
+                    <span class="time" style="color:var(--orange)">${timeFora}</span>
+                </div>
+                <button id="btn_${idCard}" class="btn-analisar" onclick="gerarAnaliseMatematicaReal(this, '${idCard}', '${ligaId}', ${idCasa}, ${idFora}, '${timeCasa}', '${timeFora}', ${idJogoAPI}, '${jogo.utcDate}')">
+                    🎯 Extrair Tabela e Analisar
+                </button>
+                <div class="painel-analise" id="analise_${idCard}"></div>
+            `;
+            document.getElementById('listaResultados').appendChild(card);
+        }
+
+        async function gerarAnaliseMatematicaReal(botao, idCard, ligaId, idCasa, idFora, timeCasa, timeFora, idJogoAPI, dataHoraReal) {
+            const painel = document.getElementById(`analise_${idCard}`);
+            botao.disabled = true;
+            botao.innerText = '⏳ Lendo Tabela de Classificação...';
+
+            try {
+                const res = await fetch(`${BASE_URL}/competitions/${ligaId}/standings`, {
+                    headers: { 'X-Auth-Token': API_KEY }
+                });
+                const data = await res.json();
+
+                let lambdaCasa = 1.0; 
+                let lambdaFora = 1.0;
+                let jogosCasa = 0;
+                let jogosFora = 0;
+
+                if (data.standings) {
+                    data.standings.forEach(grupo => {
+                        grupo.table.forEach(time => {
+                            if (time.team.id === idCasa && time.playedGames > 0) { lambdaCasa = time.goalsFor / time.playedGames; jogosCasa = time.playedGames; }
+                            if (time.team.id === idFora && time.playedGames > 0) { lambdaFora = time.goalsFor / time.playedGames; jogosFora = time.playedGames; }
+                        });
+                    });
+                }
+
+                lambdaCasa = Math.min(Math.max(lambdaCasa, 0.5), 3.0);
+                lambdaFora = Math.min(Math.max(lambdaFora, 0.5), 3.0);
+
+                let pC = 0, pE = 0, pF = 0, btts = 0, o25 = 0;
+                
+                for (let i = 0; i <= 6; i++) {
+                    for (let j = 0; j <= 6; j++) {
+                        let p = poisson(i, lambdaCasa) * poisson(j, lambdaFora);
+                        if (i > j) pC += p; else if (i < j) pF += p; else pE += p;
+                        if (i > 0 && j > 0) btts += p;
+                        if ((i + j) > 2.5) o25 += p;
+                    }
+                }
+
+                const probCasa = Math.round(pC * 100); 
+                const probEmpate = Math.round(pE * 100); 
+                const probFora = Math.round(pF * 100);
+                const probAmbas = Math.round(btts * 100); 
+                const probO25 = Math.round(o25 * 100);
+
+                let sugestao = "Análise Inconclusiva";
+                let probPrincipal = 0;
+
+                if (probCasa > 55 && probCasa >= Math.max(probFora, probO25, probAmbas)) { sugestao = `Vitória ${timeCasa}`; probPrincipal = probCasa; }
+                else if (probFora > 55 && probFora >= Math.max(probCasa, probO25, probAmbas)) { sugestao = `Vitória ${timeFora}`; probPrincipal = probFora; }
+                else if (probO25 > 60 && probO25 >= Math.max(probCasa, probFora, probAmbas)) { sugestao = `Over 2.5 Gols`; probPrincipal = probO25; }
+                else if (probAmbas > 55 && probAmbas >= Math.max(probCasa, probFora, probO25)) { sugestao = `Ambas Marcam (BTTS)`; probPrincipal = probAmbas; }
+                else { sugestao = `Dupla Chance: Casa ou Empate`; probPrincipal = probCasa + probEmpate; }
+
+                let oddJusta = (100 / probPrincipal).toFixed(2);
+                let isDiamante = probPrincipal >= 75;
+                let estiloSugestao = isDiamante 
+                    ? "background: rgba(255, 215, 0, 0.1); border: 2px dashed var(--gold); color: var(--gold);" 
+                    : "background: rgba(0, 209, 178, 0.1); border: 1px dashed var(--primary); color: var(--primary);";
+                let iconeSelo = isDiamante ? "💎 DICA DIAMANTE (Alta Confiança)" : "🎯 Dica do Poisson Real";
+
+                painel.innerHTML = `
+                    <div style="text-align:center; font-size:0.75em; color:#aaa; margin-bottom:10px;">
+                        Baseado em ${jogosCasa} jogos (${timeCasa}) e ${jogosFora} jogos (${timeFora}) na temporada.
+                    </div>
+                    <div class="prob-bar-container">
+                        <div class="prob-bar" style="width: ${probCasa}%; background: var(--green);"></div>
+                        <div class="prob-bar" style="width: ${probEmpate}%; background: #444;"></div>
+                        <div class="prob-bar" style="width: ${probFora}%; background: var(--orange);"></div>
+                    </div>
+                    <div class="stats"><span style="color:var(--green)">${probCasa}% Casa</span><span>EMP ${probEmpate}%</span><span style="color:var(--orange)">${probFora}% Fora</span></div>
+                    
+                    <div class="market-grid">
+                        <div class="market-item"><span>Média Gols Feitos</span> <span>${lambdaCasa.toFixed(1)} x ${lambdaFora.toFixed(1)}</span></div>
+                        <div class="market-item"><span>🤝 Ambas Marcam</span> <span>${probAmbas}%</span></div>
+                        <div class="market-item"><span>⚽ Over 2.5 Gols</span> <span>${probO25}%</span></div>
+                        <div class="market-item"><span>📉 Under 2.5 Gols</span> <span>${100 - probO25}%</span></div>
+                    </div>
+
+                    <div class="sugestao" style="${estiloSugestao}">
+                        <div style="font-size: 0.8em; margin-bottom: 5px; opacity: 0.8;">${iconeSelo}</div>
+                        <strong>${sugestao} (${probPrincipal}%)</strong><br>
+                        <div style="font-size: 0.85em; color: #ccc; margin-top: 8px;">
+                            Odd Justa Mínima: <strong style="color: white; font-size: 1.1em;">${oddJusta}</strong>
+                        </div>
+                    </div>
+                    
+                    <button class="btn-save" onclick="salvarAposta('${timeCasa}','${timeFora}',${probCasa},${probEmpate},${probFora},'${sugestao}', ${idJogoAPI}, '${dataHoraReal}', this)">💾 Salvar no Histórico</button>
+                `;
+                
+                painel.style.display = 'block';
+                botao.style.display = 'none';
+
+            } catch (error) {
+                botao.innerText = '❌ Erro ao extrair tabela';
+                botao.style.borderColor = 'var(--red)';
+                botao.style.color = 'var(--red)';
+            }
+        }
+
+        function poisson(k, lambda) { return (Math.exp(-lambda) * Math.pow(lambda, k)) / fatorial(k); }
+        function fatorial(n) { if (n === 0 || n === 1) return 1; let r = 1; for (let i = 2; i <= n; i++) r *= i; return r; }
+
+        async function salvarAposta(casa, fora, pC, pE, pF, sug, idJogoAPI, dataHoraReal, btn) {
+            btn.disabled = true;
+            btn.innerText = "Verificando...";
+
+            try {
+                // Verifica se já existe
                 const { data: jogoExistente, error: erroBusca } = await clienteSupabase
                     .from('partidas')
                     .select('id')
-                    .eq('id_jogo_api', idJogoApi);
+                    .eq('id_jogo_api', idJogoAPI);
 
                 if (erroBusca) throw erroBusca;
 
                 if (jogoExistente && jogoExistente.length > 0) {
-                    // Substituímos o alert() pelo Toast de Erro
-                    mostrarToast('Este jogo já está salvo no seu Histórico!', 'error');
-                    return; // Para a função aqui e não salva duplicado
+                    mostrarToast('Este jogo já está no seu Histórico!', 'error');
+                    btn.innerText = "⚠️ Já está no Histórico!";
+                    btn.style.background = "var(--orange)";
+                    btn.style.color = "#121212";
+                    return; 
                 }
 
-                // 2. SALVAMENTO: Se não existe, envia para o Supabase
-                const { error: erroSalvar } = await clienteSupabase
-                    .from('partidas')
-                    .insert([{
-                        id_jogo_api: idJogoApi,
-                        time_casa: timeCasa,
-                        time_fora: timeFora,
-                        sugestao_aposta: sugestaoAposta,
-                        data_jogo: dataJogo
-                    }]);
+                btn.innerText = "Salvando...";
+                
+                // Insere no banco
+                const { error: erroSalvar } = await clienteSupabase.from('partidas').insert([{ 
+                    time_casa: casa, 
+                    time_fora: fora, 
+                    prob_vitoria_casa: pC, 
+                    prob_empate: pE, 
+                    prob_vitoria_fora: pF, 
+                    sugestao_aposta: sug, 
+                    id_jogo_api: idJogoAPI,
+                    data_jogo: dataHoraReal 
+                }]);
 
                 if (erroSalvar) throw erroSalvar;
 
-                // Substituímos o alert() pelo Toast de Sucesso
                 mostrarToast('Jogo salvo com sucesso! 🚀', 'success');
+                btn.innerText = "Salvo com Sucesso! ✅"; 
+                btn.style.background = "var(--green)"; 
+                btn.style.color = "#121212";
 
             } catch (erro) {
-                console.error("Erro no processo:", erro);
+                console.error("Erro ao salvar:", erro);
                 mostrarToast('Erro de conexão. O Supabase pode estar pausado.', 'error');
+                btn.innerText = "Erro ao Salvar"; 
+                btn.style.background = "var(--red)"; 
+                btn.disabled = false;
             }
         }
-
-        // --- EXEMPLO DE COMO OS BOTÕES NO SEU RADAR DEVEM CHAMAR A FUNÇÃO ---
-        // Quando você for puxar os dados da API de Futebol e criar os cards no JS,
-        // o botão de salvar deve ter o onclick chamando a função salvarJogo, passando as variáveis.
-        // Abaixo é apenas uma simulação visual para você testar se o botão e o toast estão funcionando:
-
-        function simularCardNaTela() {
-            const div = document.getElementById('listaJogosDia');
-            
-            // Dados fictícios simulando a vinda da API
-            const jogoExemplo = {
-                id_api: 1234567,
-                casa: "Man City",
-                fora: "Aston Villa",
-                data: "2024-05-24T12:00:00",
-                sugestao: "Dupla Chance: Casa ou Empate"
-            };
-
-            const dataFormatada = new Date(jogoExemplo.data).toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'});
-
-            div.innerHTML = `
-                <div class="card">
-                    <span class="data-badge">📅 Premier League • ${dataFormatada}</span>
-                    <div class="times">${jogoExemplo.casa} x ${jogoExemplo.fora}</div>
-                    <div class="sugestao-box">
-                        <small style="color: #aaa;">🎯 Dica do Poisson Real</small><br>
-                        <strong>${jogoExemplo.sugestao}</strong>
-                    </div>
-                    <!-- Preste atenção nesta linha abaixo: é assim que o botão chama a função salvarJogo -->
-                    <button class="btn-salvar" onclick="salvarJogo(${jogoExemplo.id_api}, '${jogoExemplo.casa}', '${jogoExemplo.fora}', '${jogoExemplo.sugestao}', '${jogoExemplo.data}')">
-                        💾 Salvar no Histórico
-                    </button>
-                </div>
-            `;
-        }
-
-        // Chama a função para desenhar a tela (Substitua pela sua função real de buscar na API)
-        simularCardNaTela();
-
     </script>
 </body>
 </html>
