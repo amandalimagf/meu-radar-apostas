@@ -95,12 +95,8 @@
         <div class="dash-item" style="border-color: #ff4757;"><div class="dash-label" style="color: #ff4757;">🔥 Sequência Atual</div><div id="dashStreak" class="dash-valor" style="font-size: 1.1em;">0</div></div>
     </div>
 
-    <!-- Container dos Gráficos -->
+    <!-- Container do Gráfico (Apenas a Pizza agora) -->
     <div class="graficos-container">
-        <div class="grafico-box">
-            <div class="grafico-titulo">Evolução de Acertos no Mês</div>
-            <canvas id="graficoEvolucao" height="150"></canvas>
-        </div>
         <div class="grafico-box">
             <div class="grafico-titulo">Distribuição de Mercados</div>
             <canvas id="graficoMercados" height="150"></canvas>
@@ -129,8 +125,7 @@
         let paginaAtual = 1;
         const itensPorPagina = 20;
 
-        // Variáveis dos Gráficos
-        let graficoEvolucaoRef = null;
+        // Variável do Gráfico
         let graficoMercadosRef = null;
 
         // --- SISTEMA DE TOAST (ALERTAS) ---
@@ -143,11 +138,11 @@
             
             container.appendChild(toast);
             
-            setTimeout(() => { toast.classList.add('show'); }, 10); // Animação de entrada
+            setTimeout(() => { toast.classList.add('show'); }, 10); 
             
             setTimeout(() => {
                 toast.classList.remove('show');
-                setTimeout(() => { toast.remove(); }, 300); // Remove do HTML após sumir
+                setTimeout(() => { toast.remove(); }, 300); 
             }, 3000);
         }
 
@@ -182,13 +177,13 @@
         }
 
         function mudarFiltroMes() {
-            paginaAtual = 1; // Reseta a paginação ao mudar o mês
+            paginaAtual = 1; 
             renderizarTela();
         }
 
         function alterarFiltroStatus(status) {
             statusFiltroAtual = status;
-            paginaAtual = 1; // Reseta a paginação ao mudar o filtro (Green/Red)
+            paginaAtual = 1; 
             
             document.getElementById('cardDashTotal').classList.remove('filtro-ativo-todos');
             document.getElementById('cardDashGreen').classList.remove('filtro-ativo-green');
@@ -203,7 +198,7 @@
 
         function carregarMaisJogos() {
             paginaAtual++;
-            renderizarTela(false); // false indica que não precisa recalcular gráficos, apenas renderizar mais itens
+            renderizarTela(false); 
         }
 
         function renderizarTela(recalcularTudo = true) {
@@ -213,9 +208,6 @@
             let total = 0, greens = 0, reds = 0, streak = 0;
             let contandoStreak = true;
             let mercados = { 'Over 2.5': { total: 0, greens: 0 }, 'Ambas Marcam': { total: 0, greens: 0 }, 'Dupla Chance': { total: 0, greens: 0 }, 'Vitória Casa': { total: 0, greens: 0 }, 'Vitória Fora': { total: 0, greens: 0 } };
-            
-            // Dados para o Gráfico de Evolução (Linha)
-            let dadosEvolucao = {}; 
 
             let jogosFiltradosMes = todosOsJogos;
             if (mesSelecionado !== 'todos') {
@@ -231,13 +223,6 @@
                     let sug = item.sugestao_aposta || '';
                     let tipo = sug.includes('Over 2.5') ? 'Over 2.5' : sug.includes('Ambas') ? 'Ambas Marcam' : sug.includes('Dupla') ? 'Dupla Chance' : sug.includes(item.time_casa) ? 'Vitória Casa' : 'Vitória Fora';
                     if (mercados[tipo]) { mercados[tipo].total++; if (item.resultado === 'green') mercados[tipo].greens++; }
-                }
-
-                // Coletando dados para o gráfico de evolução
-                if (item.resultado && item.data_jogo) {
-                    const dia = item.data_jogo.split('T')[0]; // Pega só a data AAAA-MM-DD
-                    if (!dadosEvolucao[dia]) dadosEvolucao[dia] = { green: 0, red: 0 };
-                    dadosEvolucao[dia][item.resultado]++;
                 }
             });
 
@@ -302,40 +287,16 @@
                 }
                 document.getElementById('dashMercado').innerText = maxT > -1 ? `${melhorM} (${Math.round(maxT)}%)` : `---`;
 
-                // Renderiza Gráficos
-                desenharGraficos(dadosEvolucao, mercados);
+                // Renderiza Gráfico
+                desenharGraficos(mercados);
             }
         }
 
-        function desenharGraficos(dadosEvolucao, mercados) {
+        function desenharGraficos(mercados) {
             Chart.defaults.color = '#fff';
             Chart.defaults.font.family = "'Segoe UI', sans-serif";
 
-            // 1. Gráfico de Evolução (Linha)
-            const ctxEvolucao = document.getElementById('graficoEvolucao').getContext('2d');
-            if (graficoEvolucaoRef) graficoEvolucaoRef.destroy(); // Apaga o antigo antes de recriar
-
-            const datasOrdenadas = Object.keys(dadosEvolucao).sort();
-            const greensEvolucao = datasOrdenadas.map(d => dadosEvolucao[d].green);
-            const redsEvolucao = datasOrdenadas.map(d => dadosEvolucao[d].red);
-            const labelsDatas = datasOrdenadas.map(d => {
-                const partes = d.split('-');
-                return `${partes[2]}/${partes[1]}`;
-            });
-
-            graficoEvolucaoRef = new Chart(ctxEvolucao, {
-                type: 'line',
-                data: {
-                    labels: labelsDatas,
-                    datasets: [
-                        { label: 'Greens', data: greensEvolucao, borderColor: '#2ecc71', backgroundColor: 'rgba(46, 204, 113, 0.2)', tension: 0.3, fill: true },
-                        { label: 'Reds', data: redsEvolucao, borderColor: '#e74c3c', backgroundColor: 'transparent', tension: 0.3 }
-                    ]
-                },
-                options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }, plugins: { legend: { position: 'top' } } }
-            });
-
-            // 2. Gráfico de Mercados (Rosquinha)
+            // Gráfico de Mercados (Rosquinha)
             const ctxMercados = document.getElementById('graficoMercados').getContext('2d');
             if (graficoMercadosRef) graficoMercadosRef.destroy();
 
