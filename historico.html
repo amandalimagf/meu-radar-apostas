@@ -4,7 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Victor Tips - Histórico Profissional</title>
+    <!-- Bibliotecas: Supabase e Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         body { 
             font-family: 'Segoe UI', sans-serif; 
@@ -24,15 +26,17 @@
         .dash-label { font-size: 0.65em; color: #aaa; font-weight: bold; margin-bottom: 5px; text-transform: uppercase; text-align: center;}
         .dash-valor { font-size: 1.3em; font-weight: bold; color: white; text-align: center;}
 
-        /* NOVAS CLASSES PARA OS FILTROS CLICÁVEIS */
         .clicavel { cursor: pointer; }
         .clicavel:hover { background: rgba(50, 50, 50, 0.9); transform: translateY(-3px); }
         .filtro-ativo-todos { border-color: white !important; box-shadow: 0 0 8px rgba(255,255,255,0.3); }
         .filtro-ativo-green { border-color: #2ecc71 !important; box-shadow: 0 0 8px rgba(46,204,113,0.4); }
         .filtro-ativo-red { border-color: #e74c3c !important; box-shadow: 0 0 8px rgba(231,76,60,0.4); }
 
-        .btn-check { width: 100%; padding: 15px; background: #00d1b2; border: none; border-radius: 10px; color: #121212; font-weight: bold; margin-bottom: 20px; cursor: pointer; transition: 0.2s; }
+        .btn-check, .btn-carregar-mais { width: 100%; padding: 15px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        .btn-check { background: #00d1b2; color: #121212; margin-bottom: 10px; }
         .btn-check:hover { background: #00b39a; }
+        .btn-carregar-mais { background: #333; color: white; margin-top: 15px; margin-bottom: 30px; display: none; }
+        .btn-carregar-mais:hover { background: #444; }
         
         .card { background: rgba(30, 30, 30, 0.9); padding: 15px; border-radius: 12px; margin-bottom: 15px; border-left: 5px solid #444; position: relative;}
         .green { border-left-color: #2ecc71; }
@@ -43,6 +47,19 @@
         .placar-box { background: rgba(0,0,0,0.3); padding: 5px 10px; border-radius: 6px; font-weight: bold; color: #00d1b2; margin-top: 10px; display: inline-block; }
 
         select.filtro-mes { width: 100%; padding: 12px; background: #2a2a2a; color: white; border: 1px solid #444; border-radius: 8px; font-size: 1em; margin-bottom: 15px; cursor: pointer; }
+
+        /* Estilos dos Gráficos */
+        .graficos-container { display: flex; flex-direction: column; gap: 15px; margin-bottom: 20px; }
+        .grafico-box { background: rgba(30, 30, 30, 0.9); padding: 15px; border-radius: 8px; border: 1px solid #333; }
+        .grafico-titulo { text-align: center; font-size: 0.85em; color: #aaa; margin-bottom: 10px; font-weight: bold; text-transform: uppercase; }
+
+        /* Estilos do Toast (Notificação) */
+        #toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
+        .toast { padding: 12px 20px; border-radius: 8px; color: white; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.3); transform: translateX(120%); transition: transform 0.3s ease-in-out; display: flex; align-items: center; gap: 10px; }
+        .toast.show { transform: translateX(0); }
+        .toast.success { background: #2ecc71; }
+        .toast.error { background: #e74c3c; }
+        .toast.info { background: #3498db; }
     </style>
 </head>
 <body>
@@ -54,7 +71,7 @@
 
     <h1 style="text-align: center; color: #00d1b2; margin-bottom: 15px;">Desempenho 📊</h1>
 
-    <select id="filtroMes" class="filtro-mes" onchange="renderizarTela()">
+    <select id="filtroMes" class="filtro-mes" onchange="mudarFiltroMes()">
         <option value="todos">Todos os Meses</option>
     </select>
 
@@ -78,9 +95,25 @@
         <div class="dash-item" style="border-color: #ff4757;"><div class="dash-label" style="color: #ff4757;">🔥 Sequência Atual</div><div id="dashStreak" class="dash-valor" style="font-size: 1.1em;">0</div></div>
     </div>
 
+    <!-- Container dos Gráficos -->
+    <div class="graficos-container">
+        <div class="grafico-box">
+            <div class="grafico-titulo">Evolução de Acertos no Mês</div>
+            <canvas id="graficoEvolucao" height="150"></canvas>
+        </div>
+        <div class="grafico-box">
+            <div class="grafico-titulo">Distribuição de Mercados</div>
+            <canvas id="graficoMercados" height="150"></canvas>
+        </div>
+    </div>
+
     <button class="btn-check" id="btnAutoCheck" onclick="verificarResultadosAutomatico()">🤖 Conferir Resultados via API</button>
 
     <div id="listaHistorico"></div>
+    <button class="btn-carregar-mais" id="btnCarregarMais" onclick="carregarMaisJogos()">⏬ Carregar Mais Antigos</button>
+
+    <!-- Container para os Alertas Bonitos -->
+    <div id="toast-container"></div>
 
     <script>
         const API_KEY = 'b9ba384b106c433686606c4dfa53261a';
@@ -90,7 +123,33 @@
         const clienteSupabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         let todosOsJogos = [];
-        let statusFiltroAtual = 'todos'; // Variavel global do filtro de cliques
+        let statusFiltroAtual = 'todos'; 
+        
+        // Variáveis de Paginação
+        let paginaAtual = 1;
+        const itensPorPagina = 20;
+
+        // Variáveis dos Gráficos
+        let graficoEvolucaoRef = null;
+        let graficoMercadosRef = null;
+
+        // --- SISTEMA DE TOAST (ALERTAS) ---
+        function mostrarToast(mensagem, tipo = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${tipo}`;
+            const icone = tipo === 'success' ? '✅' : tipo === 'error' ? '⚠️' : 'ℹ️';
+            toast.innerHTML = `<span>${icone}</span> <span>${mensagem}</span>`;
+            
+            container.appendChild(toast);
+            
+            setTimeout(() => { toast.classList.add('show'); }, 10); // Animação de entrada
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => { toast.remove(); }, 300); // Remove do HTML após sumir
+            }, 3000);
+        }
 
         async function carregarHistorico() {
             const { data } = await clienteSupabase.from('partidas').select('*').order('id', { ascending: false });
@@ -122,16 +181,19 @@
             });
         }
 
-        // Função chamada ao clicar nos cards do dashboard
+        function mudarFiltroMes() {
+            paginaAtual = 1; // Reseta a paginação ao mudar o mês
+            renderizarTela();
+        }
+
         function alterarFiltroStatus(status) {
             statusFiltroAtual = status;
+            paginaAtual = 1; // Reseta a paginação ao mudar o filtro (Green/Red)
             
-            // Remove os brilhos de seleção de todos
             document.getElementById('cardDashTotal').classList.remove('filtro-ativo-todos');
             document.getElementById('cardDashGreen').classList.remove('filtro-ativo-green');
             document.getElementById('cardDashRed').classList.remove('filtro-ativo-red');
             
-            // Adiciona o brilho no clicado
             if(status === 'todos') document.getElementById('cardDashTotal').classList.add('filtro-ativo-todos');
             if(status === 'green') document.getElementById('cardDashGreen').classList.add('filtro-ativo-green');
             if(status === 'red') document.getElementById('cardDashRed').classList.add('filtro-ativo-red');
@@ -139,21 +201,28 @@
             renderizarTela();
         }
 
-        function renderizarTela() {
+        function carregarMaisJogos() {
+            paginaAtual++;
+            renderizarTela(false); // false indica que não precisa recalcular gráficos, apenas renderizar mais itens
+        }
+
+        function renderizarTela(recalcularTudo = true) {
             const mesSelecionado = document.getElementById('filtroMes').value;
             const div = document.getElementById('listaHistorico');
-            div.innerHTML = '';
             
             let total = 0, greens = 0, reds = 0, streak = 0;
             let contandoStreak = true;
             let mercados = { 'Over 2.5': { total: 0, greens: 0 }, 'Ambas Marcam': { total: 0, greens: 0 }, 'Dupla Chance': { total: 0, greens: 0 }, 'Vitória Casa': { total: 0, greens: 0 }, 'Vitória Fora': { total: 0, greens: 0 } };
+            
+            // Dados para o Gráfico de Evolução (Linha)
+            let dadosEvolucao = {}; 
 
             let jogosFiltradosMes = todosOsJogos;
             if (mesSelecionado !== 'todos') {
                 jogosFiltradosMes = todosOsJogos.filter(item => item.data_jogo && item.data_jogo.startsWith(mesSelecionado));
             }
 
-            // Cálculos matemáticos GERAIS do mês (sem influência do clique)
+            // Cálculos gerais
             jogosFiltradosMes.slice().reverse().forEach(item => {
                 if (item.resultado === 'green') { greens++; total++; if(contandoStreak) streak++; }
                 else if (item.resultado === 'red') { reds++; total++; contandoStreak = false; streak = 0; }
@@ -163,9 +232,16 @@
                     let tipo = sug.includes('Over 2.5') ? 'Over 2.5' : sug.includes('Ambas') ? 'Ambas Marcam' : sug.includes('Dupla') ? 'Dupla Chance' : sug.includes(item.time_casa) ? 'Vitória Casa' : 'Vitória Fora';
                     if (mercados[tipo]) { mercados[tipo].total++; if (item.resultado === 'green') mercados[tipo].greens++; }
                 }
+
+                // Coletando dados para o gráfico de evolução
+                if (item.resultado && item.data_jogo) {
+                    const dia = item.data_jogo.split('T')[0]; // Pega só a data AAAA-MM-DD
+                    if (!dadosEvolucao[dia]) dadosEvolucao[dia] = { green: 0, red: 0 };
+                    dadosEvolucao[dia][item.resultado]++;
+                }
             });
 
-            // Aplica o filtro do clique (Green/Red/Total) APENAS para a lista visual
+            // Aplica filtro de Green/Red na lista
             let listaVisual = jogosFiltradosMes;
             if (statusFiltroAtual !== 'todos') {
                 listaVisual = jogosFiltradosMes.filter(item => item.resultado === statusFiltroAtual);
@@ -174,23 +250,29 @@
             // Ordenação Visual: Status -> Data
             listaVisual = [...listaVisual].sort((a, b) => {
                 const peso = (r) => r === 'green' ? 1 : r === 'red' ? 2 : 0;
-                if (peso(a.resultado) !== peso(b.resultado)) {
-                    return peso(a.resultado) - peso(b.resultado);
-                }
+                if (peso(a.resultado) !== peso(b.resultado)) return peso(a.resultado) - peso(b.resultado);
                 const dataTempoA = a.data_jogo ? new Date(a.data_jogo).getTime() : 0;
                 const dataTempoB = b.data_jogo ? new Date(b.data_jogo).getTime() : 0;
                 return dataTempoB - dataTempoA;
             });
 
-            listaVisual.forEach(item => {
+            // --- PAGINAÇÃO ---
+            const itensExibidos = listaVisual.slice(0, paginaAtual * itensPorPagina);
+            const btnCarregarMais = document.getElementById('btnCarregarMais');
+            
+            if (listaVisual.length > paginaAtual * itensPorPagina) {
+                btnCarregarMais.style.display = 'block';
+            } else {
+                btnCarregarMais.style.display = 'none';
+            }
+
+            div.innerHTML = '';
+            itensExibidos.forEach(item => {
                 const corClasse = item.resultado === 'green' ? 'green' : (item.resultado === 'red' ? 'red' : '');
-                
-                let dataFormatada = "Data não disponível";
+                let dataFormatada = "Data indisponível";
                 if (item.data_jogo) {
                     const dataObj = new Date(item.data_jogo);
-                    if (!isNaN(dataObj)) {
-                        dataFormatada = dataObj.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'});
-                    }
+                    if (!isNaN(dataObj)) dataFormatada = dataObj.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit'});
                 }
 
                 div.innerHTML += `
@@ -204,33 +286,96 @@
                 `;
             });
 
-            // Atualiza os painéis (Eles continuam mostrando os dados totais do mês)
-            document.getElementById('dashTotal').innerText = total;
-            document.getElementById('dashGreen').innerText = greens;
-            document.getElementById('dashRed').innerText = reds;
-            const taxa = total > 0 ? Math.round((greens / total) * 100) : 0;
-            document.getElementById('dashTaxa').innerText = `${taxa}%`;
-            document.getElementById('dashStreak').innerText = `${streak} 🔥`;
-            
-            let melhorM = 'Nenhum', maxT = -1;
-            for (const [n, s] of Object.entries(mercados)) {
-                let t = s.total > 0 ? (s.greens / s.total) * 100 : -1;
-                if (t > maxT) { maxT = t; melhorM = n; }
+            if (recalcularTudo) {
+                // Atualiza Painéis
+                document.getElementById('dashTotal').innerText = total;
+                document.getElementById('dashGreen').innerText = greens;
+                document.getElementById('dashRed').innerText = reds;
+                const taxa = total > 0 ? Math.round((greens / total) * 100) : 0;
+                document.getElementById('dashTaxa').innerText = `${taxa}%`;
+                document.getElementById('dashStreak').innerText = `${streak} 🔥`;
+                
+                let melhorM = 'Nenhum', maxT = -1;
+                for (const [n, s] of Object.entries(mercados)) {
+                    let t = s.total > 0 ? (s.greens / s.total) * 100 : -1;
+                    if (t > maxT) { maxT = t; melhorM = n; }
+                }
+                document.getElementById('dashMercado').innerText = maxT > -1 ? `${melhorM} (${Math.round(maxT)}%)` : `---`;
+
+                // Renderiza Gráficos
+                desenharGraficos(dadosEvolucao, mercados);
             }
-            document.getElementById('dashMercado').innerText = maxT > -1 ? `${melhorM} (${Math.round(maxT)}%)` : `---`;
+        }
+
+        function desenharGraficos(dadosEvolucao, mercados) {
+            Chart.defaults.color = '#fff';
+            Chart.defaults.font.family = "'Segoe UI', sans-serif";
+
+            // 1. Gráfico de Evolução (Linha)
+            const ctxEvolucao = document.getElementById('graficoEvolucao').getContext('2d');
+            if (graficoEvolucaoRef) graficoEvolucaoRef.destroy(); // Apaga o antigo antes de recriar
+
+            const datasOrdenadas = Object.keys(dadosEvolucao).sort();
+            const greensEvolucao = datasOrdenadas.map(d => dadosEvolucao[d].green);
+            const redsEvolucao = datasOrdenadas.map(d => dadosEvolucao[d].red);
+            const labelsDatas = datasOrdenadas.map(d => {
+                const partes = d.split('-');
+                return `${partes[2]}/${partes[1]}`;
+            });
+
+            graficoEvolucaoRef = new Chart(ctxEvolucao, {
+                type: 'line',
+                data: {
+                    labels: labelsDatas,
+                    datasets: [
+                        { label: 'Greens', data: greensEvolucao, borderColor: '#2ecc71', backgroundColor: 'rgba(46, 204, 113, 0.2)', tension: 0.3, fill: true },
+                        { label: 'Reds', data: redsEvolucao, borderColor: '#e74c3c', backgroundColor: 'transparent', tension: 0.3 }
+                    ]
+                },
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }, plugins: { legend: { position: 'top' } } }
+            });
+
+            // 2. Gráfico de Mercados (Rosquinha)
+            const ctxMercados = document.getElementById('graficoMercados').getContext('2d');
+            if (graficoMercadosRef) graficoMercadosRef.destroy();
+
+            const nomesMercados = Object.keys(mercados).filter(k => mercados[k].total > 0);
+            const totaisMercados = nomesMercados.map(k => mercados[k].total);
+
+            graficoMercadosRef = new Chart(ctxMercados, {
+                type: 'doughnut',
+                data: {
+                    labels: nomesMercados,
+                    datasets: [{
+                        data: totaisMercados,
+                        backgroundColor: ['#3498db', '#9b59b6', '#f1c40f', '#e67e22', '#1abc9c'],
+                        borderWidth: 0
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { boxWidth: 12 } } } }
+            });
         }
 
         async function verificarResultadosAutomatico() {
             const btn = document.getElementById('btnAutoCheck');
             btn.disabled = true; btn.innerText = '🤖 Conferindo...';
+            mostrarToast('Buscando resultados na API...', 'info');
 
             const { data: pendentes } = await clienteSupabase.from('partidas').select('*').is('resultado', null).not('id_jogo_api', 'is', null);
-            if (!pendentes || pendentes.length === 0) { alert("Nenhum pendente."); btn.disabled = false; btn.innerText = '🤖 Conferir Resultados via API'; return; }
+            
+            if (!pendentes || pendentes.length === 0) { 
+                mostrarToast('Nenhum jogo pendente para verificar.', 'info');
+                btn.disabled = false; btn.innerText = '🤖 Conferir Resultados via API'; 
+                return; 
+            }
+
+            let conferidos = 0;
 
             for (const aposta of pendentes) {
                 try {
                     const res = await fetch(`${BASE_URL}/matches/${aposta.id_jogo_api}`, { headers: { 'X-Auth-Token': API_KEY } });
                     const jogo = await res.json();
+                    
                     if (jogo.status === 'FINISHED') {
                         const h = jogo.score.fullTime.home;
                         const a = jogo.score.fullTime.away;
@@ -249,10 +394,19 @@
                             resultado: deu ? 'green' : 'red',
                             placar: placarString 
                         }).eq('id', aposta.id);
+                        
+                        conferidos++;
                     }
                 } catch (e) { console.error(e); }
             }
-            location.reload();
+            
+            if (conferidos > 0) {
+                mostrarToast(`${conferidos} jogo(s) atualizado(s)! Recarregando...`, 'success');
+                setTimeout(() => { location.reload(); }, 2000);
+            } else {
+                mostrarToast('Nenhum jogo foi finalizado ainda.', 'info');
+                btn.disabled = false; btn.innerText = '🤖 Conferir Resultados via API';
+            }
         }
         carregarHistorico();
     </script>
