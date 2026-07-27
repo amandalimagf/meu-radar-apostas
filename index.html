@@ -185,32 +185,26 @@
             const ligaId = document.getElementById('filtroLiga').value;
             
             btn.disabled = true;
-            btn.innerText = 'A consultar Jogos...';
+            btn.innerText = 'A consultar API-Football...';
             divResultados.innerHTML = '';
 
             try {
-                // Força o ano correto de 2026 e data precisa baseada no fuso do Brasil
-                const agora = new Date();
-                const options = { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit' };
-                const partesData = new Intl.DateTimeFormat('en-CA', options).formatToParts(agora);
+                // Vamos buscar os jogos da rodada atual ou de uma janela ampla (ex: últimos 7 dias até daqui a 7 dias)
+                // Isto evita falhas se a data exata falhar por fuso horário.
+                const hoje = new Date();
                 
-                const ano = partesData.find(p => p.type === 'year').value;
-                const mes = partesData.find(p => p.type === 'month').value;
-                const dia = partesData.find(p => p.type === 'day').value;
+                const inicioObj = new Date(hoje);
+                inicioObj.setDate(inicioObj.getDate() - 2); // 2 dias atrás
+                const dataInicio = inicioObj.toISOString().split('T')[0];
                 
-                const dataHoje = `${ano}-${mes}-${dia}`;
-                
-                // Janela de 4 dias para garantir que apanha os jogos
-                const dataFuturoObj = new Date(agora);
-                dataFuturoObj.setDate(dataFuturoObj.getDate() + 4);
-                const partesFuturo = new Intl.DateTimeFormat('en-CA', options).formatToParts(dataFuturoObj);
-                const anoF = partesFuturo.find(p => p.type === 'year').value;
-                const mesF = partesFuturo.find(p => p.type === 'month').value;
-                const diaF = partesFuturo.find(p => p.type === 'day').value;
-                const dataFuturo = `${anoF}-${mesF}-${diaF}`;
+                const fimObj = new Date(hoje);
+                fimObj.setDate(fimObj.getDate() + 7); // daqui a 7 dias
+                const dataFim = fimObj.toISOString().split('T')[0];
 
-                // URL com temporada fixa 2026 e datas exatas
-                const urlChamada = `${BASE_URL}/fixtures?league=${ligaId}&season=2026&from=${dataHoje}&to=${dataFuturo}&timezone=America/Sao_Paulo`;
+                // URL sem restrição rígida de timezone na string da API, mas com season=2026
+                const urlChamada = `${BASE_URL}/fixtures?league=${ligaId}&season=2026&from=${dataInicio}&to=${dataFim}`;
+                
+                console.log("A chamar:", urlChamada);
                 
                 const res = await fetch(urlChamada, {
                     method: 'GET',
@@ -218,9 +212,10 @@
                 });
                 
                 const data = await res.json();
+                console.log("Resposta API:", data);
 
                 if (data.errors && data.errors.requests) {
-                    mostrarToast('Atingiu o limite diário da API.', 'error');
+                    mostrarToast('Limite diário da API atingido.', 'error');
                     divResultados.innerHTML = `<p style="color:var(--orange); text-align:center;">Limite da API atingido.</p>`;
                     return;
                 }
@@ -228,13 +223,34 @@
                 const jogos = data.response;
 
                 if (!jogos || jogos.length === 0) {
-                    divResultados.innerHTML = `<p style="text-align:center; padding: 20px; background: #252525; border-radius: 8px;">Nenhum jogo encontrado para esta liga nestes dias.</p>`;
+                    // Tentar alternativa: buscar os próximos jogos da liga sem filtro de data (live/next)
+                    divResultados.innerHTML = `
+                        <div style="background: #252525; padding: 15px; border-radius: 8px; text-align: center;">
+                            <p style="color: var(--orange); margin-bottom: 10px;">Nenhum jogo encontrado na janela de datas (${dataInicio} a ${dataFim}).</p>
+                            <p style="font-size: 0.8em; color: #aaa;">A tentar buscar por 'next=10' na API...</p>
+                        </div>
+                    `;
+                    
+                    // Segunda tentativa: buscar os próximos 10 jogos direto da liga
+                    const resNext = await fetch(`${BASE_URL}/fixtures?league=${ligaId}&season=2026&next=10`, {
+                        headers: headersAPI
+                    });
+                    const dataNext = await resNext.json();
+                    
+                    if (dataNext.response && dataNext.response.length > 0) {
+                        divResultados.innerHTML = '';
+                        dataNext.response.forEach(jogo => renderizarCard(jogo, ligaId, 2026));
+                        mostrarToast('Jogos carregados via próximo calendário!', 'success');
+                        return;
+                    } else {
+                        divResultados.innerHTML = `<p style="text-align:center; padding: 20px; background: #252525; border-radius: 8px; color: var(--red);">A API retornou zero jogos para a Série B (Season 2026). Verifique se o ID da liga ou a temporada na API-Football é 2025/2026.</p>`;
+                    }
                 } else {
                     jogos.forEach(jogo => renderizarCard(jogo, ligaId, 2026));
                 }
             } catch (error) {
                 console.error(error);
-                divResultados.innerHTML = `<p style="color:red; text-align:center;">Erro de ligação. Verifique a Vercel!</p>`;
+                divResultados.innerHTML = `<p style="color:red; text-align:center;">Erro de ligação. Verifique a consola do navegador (F12).</p>`;
             } finally {
                 btn.disabled = false;
                 btn.innerText = 'Carregar Jogos da Série B';
@@ -358,7 +374,7 @@
                         <div class="prob-bar" style="width: ${probEmpate}%; background: #444;"></div>
                         <div class="prob-bar" style="width: ${probFora}%; background: var(--orange);"></div>
                     </div>
-                    <div class="stats"><span style="color:var(--green)">${probCasa}% Casa</span><span>EMP ${probEmpate}%</span><span style="color:var(--orange)">${probFora}% Fora</span></div>
+                    <div class="stats"><span style="color:var(--green)">% Casa</span><span>EMP ${probEmpate}%</span><span style="color:var(--orange)">${probFora}% Fora</span></div>
                     
                     <div class="market-grid">
                         <div class="market-item"><span>Média Gols Feitos</span> <span>${lambdaCasa.toFixed(1)} x ${lambdaFora.toFixed(1)}</span></div>
