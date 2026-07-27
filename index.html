@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Victor Tips - Radar Pro</title>
+    <title>Victor Tips - Radar Pro (API Premium)</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root { --primary: #00d1b2; --bg: #121212; --card: #1e1e1e; --green: #2ecc71; --orange: #f39c12; --red: #e74c3c; --gold: #ffd700; }
@@ -76,22 +76,21 @@
 
     <div class="header">
         <h1>Victor Tips 🎯</h1>
-        <p>Estatísticas puxadas da Tabela de Classificação Real</p>
+        <p>Motor de Análise Premium (API-Football)</p>
     </div>
 
     <div class="filter-container">
-        <label>Ligas Garantidas (Dados Reais)</label>
+        <label>Selecione a Liga</label>
         <select id="filtroLiga">
-            <option value="BSA">🇧🇷 Brasileirão Série A</option>
-            <option value="PL">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League</option>
-            <option value="ELC">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Championship (ING 2)</option>
-            <option value="PD">🇪🇸 La Liga</option>
-            <option value="BL1">🇩🇪 Bundesliga</option>
-            <option value="SA">🇮🇹 Serie A (Itália)</option>
-            <option value="FL1">🇫🇷 Ligue 1</option>
-            <option value="PPL">🇵🇹 Primeira Liga</option>
-            <option value="DED">🇳🇱 Eredivisie (Holanda)</option>
-            <option value="CL">⭐ Champions League</option>
+            <option value="71">🇧🇷 Brasileirão Série A</option>
+            <option value="39">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League</option>
+            <option value="40">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Championship (ING 2)</option>
+            <option value="140">🇪🇸 La Liga</option>
+            <option value="78">🇩🇪 Bundesliga</option>
+            <option value="135">🇮🇹 Serie A (Itália)</option>
+            <option value="61">🇫🇷 Ligue 1</option>
+            <option value="94">🇵🇹 Primeira Liga</option>
+            <option value="2">⭐ Champions League</option>
         </select>
     </div>
 
@@ -102,13 +101,20 @@
     <div id="toast-container"></div>
 
     <script>
-        const API_KEY = 'b9ba384b106c433686606c4dfa53261a'; 
+        // NOVA API KEY AQUI:
+        const API_KEY = '1b71c21e279516252b170cfc1fcb803d'; 
         const BASE_URL = '/api/football';
+        
+        // Supabase continua igual
         const SUPABASE_URL = 'https://tvdwgfytguwlsppvjvkk.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR2ZHdnZnl0Z3V3bHNwcHZqdmtrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY1Njk0OTEsImV4cCI6MjA5MjE0NTQ5MX0.mKbLRjWV3eoeAxUtMX-yY24hZQ-mN0aEtnhxk2pH5Us';
         const clienteSupabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // --- FUNÇÃO DO TOAST (ALERTAS) ---
+        // NOVA FORMA DE ENVIAR A CHAVE PARA A API-FOOTBALL
+        const headersAPI = {
+            'x-apisports-key': API_KEY
+        };
+
         function mostrarToast(mensagem, tipo = 'info') {
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
@@ -117,9 +123,7 @@
             toast.innerHTML = `<span>${icone}</span> <span>${mensagem}</span>`;
             
             container.appendChild(toast);
-            
             setTimeout(() => { toast.classList.add('show'); }, 10);
-            
             setTimeout(() => {
                 toast.classList.remove('show');
                 setTimeout(() => { toast.remove(); }, 300);
@@ -132,58 +136,63 @@
             const ligaId = document.getElementById('filtroLiga').value;
             
             btn.disabled = true;
-            btn.innerText = 'Consultando Jogos Reais...';
+            btn.innerText = 'Consultando Jogos...';
             divResultados.innerHTML = '';
 
             try {
-                const dataHoje = new Date();
-                const hoje = dataHoje.toLocaleDateString('en-CA'); 
-                const dataFim = new Date(dataHoje);
-                dataFim.setDate(dataFim.getDate() + 3);
-                const futuro = dataFim.toLocaleDateString('en-CA');
+                // Pega a data de hoje no formato YYYY-MM-DD
+                const dataHoje = new Date().toISOString().split('T')[0];
+                const anoAtual = new Date().getFullYear();
                 
-                const res = await fetch(`${BASE_URL}/matches?competitions=${ligaId}&dateFrom=${hoje}&dateTo=${futuro}`, {
+                // Chamada ajustada para o formato da nova API
+                const res = await fetch(`${BASE_URL}/fixtures?league=${ligaId}&season=2024&date=${dataHoje}`, {
                     method: 'GET',
-                    headers: { 'X-Auth-Token': API_KEY }
+                    headers: headersAPI
                 });
                 
                 const data = await res.json();
 
-                if (data.errorCode) {
-                    divResultados.innerHTML = `<p style="color:var(--orange); text-align:center;">Erro da API: ${data.message}</p>`;
+                if (data.errors && data.errors.requests) {
+                    mostrarToast('Atingiu o limite gratuito de hoje (100 requisições).', 'error');
+                    divResultados.innerHTML = `<p style="color:var(--orange); text-align:center;">Limite da API atingido.</p>`;
                     return;
                 }
 
-                const jogos = data.matches;
+                const jogos = data.response;
 
                 if (!jogos || jogos.length === 0) {
-                    divResultados.innerHTML = `<p style="text-align:center; padding: 20px; background: #252525; border-radius: 8px;">Nenhum jogo agendado nesta liga para os próximos 3 dias.</p>`;
+                    divResultados.innerHTML = `<p style="text-align:center; padding: 20px; background: #252525; border-radius: 8px;">Nenhum jogo agendado nesta liga para o dia de hoje.</p>`;
                 } else {
-                    jogos.forEach(jogo => renderizarCard(jogo, ligaId));
+                    jogos.forEach(jogo => renderizarCard(jogo, ligaId, anoAtual));
                 }
             } catch (error) {
-                divResultados.innerHTML = `<p style="color:red; text-align:center;">Erro de conexão. Lembre-se de acessar pelo link da Vercel!</p>`;
+                divResultados.innerHTML = `<p style="color:red; text-align:center;">Erro de conexão. Verifique a Vercel!</p>`;
             } finally {
                 btn.disabled = false;
                 btn.innerText = 'Atualizar Lista de Jogos';
             }
         }
 
-        function renderizarCard(jogo, ligaId) {
-            const timeCasa = jogo.homeTeam.shortName || jogo.homeTeam.name;
-            const timeFora = jogo.awayTeam.shortName || jogo.awayTeam.name;
-            const idCasa = jogo.homeTeam.id;
-            const idFora = jogo.awayTeam.id;
+        function renderizarCard(jogoCompleto, ligaId, temporada) {
+            const jogo = jogoCompleto.fixture;
+            const times = jogoCompleto.teams;
+            const liga = jogoCompleto.league;
+
+            const timeCasa = times.home.name;
+            const timeFora = times.away.name;
+            const idCasa = times.home.id;
+            const idFora = times.away.id;
             const idJogoAPI = jogo.id; 
             
-            const dataJogo = new Date(jogo.utcDate);
+            const dataJogo = new Date(jogo.date);
             const diaMes = dataJogo.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
             const hora = dataJogo.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
             
             let infoTempo = `${diaMes} às ${hora}`;
-            if (jogo.status === 'IN_PLAY') infoTempo = '🔴 AO VIVO';
-            if (jogo.status === 'FINISHED') infoTempo = `Encerrado (${diaMes})`;
-            if (jogo.status === 'PAUSED') infoTempo = '⏸️ INTERVALO';
+            const status = jogo.status.short;
+            
+            if (['1H', '2H', 'HT', 'ET', 'P'].includes(status)) infoTempo = '🔴 AO VIVO';
+            if (['FT', 'AET', 'PEN'].includes(status)) infoTempo = `Encerrado (${diaMes})`;
             
             const idCard = `jogo_${jogo.id}`;
             const card = document.createElement('div');
@@ -191,13 +200,13 @@
             card.id = idCard;
             
             card.innerHTML = `
-                <div class="liga-tag">${jogo.competition.name} • 🗓️ ${infoTempo}</div>
+                <div class="liga-tag">${liga.name} • 🗓️ ${infoTempo}</div>
                 <div class="confronto">
                     <span class="time" style="color:var(--green)">${timeCasa}</span>
                     <span style="color:#666; font-size: 0.8em; padding: 0 10px;">X</span>
                     <span class="time" style="color:var(--orange)">${timeFora}</span>
                 </div>
-                <button id="btn_${idCard}" class="btn-analisar" onclick="gerarAnaliseMatematicaReal(this, '${idCard}', '${ligaId}', ${idCasa}, ${idFora}, '${timeCasa}', '${timeFora}', ${idJogoAPI}, '${jogo.utcDate}')">
+                <button id="btn_${idCard}" class="btn-analisar" onclick="gerarAnaliseMatematicaReal(this, '${idCard}', '${ligaId}', ${idCasa}, ${idFora}, '${timeCasa}', '${timeFora}', ${idJogoAPI}, '${jogo.date}', ${temporada})">
                     🎯 Extrair Tabela e Analisar
                 </button>
                 <div class="painel-analise" id="analise_${idCard}"></div>
@@ -205,14 +214,15 @@
             document.getElementById('listaResultados').appendChild(card);
         }
 
-        async function gerarAnaliseMatematicaReal(botao, idCard, ligaId, idCasa, idFora, timeCasa, timeFora, idJogoAPI, dataHoraReal) {
+        async function gerarAnaliseMatematicaReal(botao, idCard, ligaId, idCasa, idFora, timeCasa, timeFora, idJogoAPI, dataHoraReal, temporada) {
             const painel = document.getElementById(`analise_${idCard}`);
             botao.disabled = true;
-            botao.innerText = '⏳ Lendo Tabela de Classificação...';
+            botao.innerText = '⏳ Analisando Dados...';
 
             try {
-                const res = await fetch(`${BASE_URL}/competitions/${ligaId}/standings`, {
-                    headers: { 'X-Auth-Token': API_KEY }
+                // Nova chamada para Standings (Tabela) na API-Football
+                const res = await fetch(`${BASE_URL}/standings?league=${ligaId}&season=2024`, {
+                    headers: headersAPI
                 });
                 const data = await res.json();
 
@@ -221,15 +231,22 @@
                 let jogosCasa = 0;
                 let jogosFora = 0;
 
-                if (data.standings) {
-                    data.standings.forEach(grupo => {
-                        grupo.table.forEach(time => {
-                            if (time.team.id === idCasa && time.playedGames > 0) { lambdaCasa = time.goalsFor / time.playedGames; jogosCasa = time.playedGames; }
-                            if (time.team.id === idFora && time.playedGames > 0) { lambdaFora = time.goalsFor / time.playedGames; jogosFora = time.playedGames; }
-                        });
+                if (data.response && data.response.length > 0) {
+                    const tabela = data.response[0].league.standings[0];
+                    
+                    tabela.forEach(time => {
+                        if (time.team.id === idCasa && time.all.played > 0) { 
+                            lambdaCasa = time.all.goals.for / time.all.played; 
+                            jogosCasa = time.all.played; 
+                        }
+                        if (time.team.id === idFora && time.all.played > 0) { 
+                            lambdaFora = time.all.goals.for / time.all.played; 
+                            jogosFora = time.all.played; 
+                        }
                     });
                 }
 
+                // Limitações matemáticas para manter a sanidade do cálculo
                 lambdaCasa = Math.min(Math.max(lambdaCasa, 0.5), 3.0);
                 lambdaFora = Math.min(Math.max(lambdaFora, 0.5), 3.0);
 
@@ -299,7 +316,8 @@
                 botao.style.display = 'none';
 
             } catch (error) {
-                botao.innerText = '❌ Erro ao extrair tabela';
+                console.error(error);
+                botao.innerText = '❌ Erro ao extrair dados';
                 botao.style.borderColor = 'var(--red)';
                 botao.style.color = 'var(--red)';
             }
@@ -313,7 +331,6 @@
             btn.innerText = "Verificando...";
 
             try {
-                // Verifica se já existe
                 const { data: jogoExistente, error: erroBusca } = await clienteSupabase
                     .from('partidas')
                     .select('id')
@@ -331,7 +348,6 @@
 
                 btn.innerText = "Salvando...";
                 
-                // Insere no banco
                 const { error: erroSalvar } = await clienteSupabase.from('partidas').insert([{ 
                     time_casa: casa, 
                     time_fora: fora, 
@@ -351,8 +367,7 @@
                 btn.style.color = "#121212";
 
             } catch (erro) {
-                console.error("Erro ao salvar:", erro);
-                mostrarToast('Erro de conexão. O Supabase pode estar pausado.', 'error');
+                mostrarToast('Erro de conexão com o Supabase.', 'error');
                 btn.innerText = "Erro ao Salvar"; 
                 btn.style.background = "var(--red)"; 
                 btn.disabled = false;
