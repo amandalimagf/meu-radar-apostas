@@ -189,22 +189,20 @@
             divResultados.innerHTML = '';
 
             try {
-                // Vamos buscar os jogos da rodada atual ou de uma janela ampla (ex: últimos 7 dias até daqui a 7 dias)
-                // Isto evita falhas se a data exata falhar por fuso horário.
+                // Definindo a temporada inteligente: Para o Brasileirão (71, 72, 73), a API-Football usa 2025 atualmente.
+                // Criamos uma lógica dinâmica: se for liga do Brasil (71, 72, 73), usamos 2025, senão 2026.
+                let temporadaLiga = ['71', '72', '73'].includes(ligaId) ? '2025' : '2026';
+
                 const hoje = new Date();
-                
                 const inicioObj = new Date(hoje);
-                inicioObj.setDate(inicioObj.getDate() - 2); // 2 dias atrás
+                inicioObj.setDate(inicioObj.getDate() - 2);
                 const dataInicio = inicioObj.toISOString().split('T')[0];
                 
                 const fimObj = new Date(hoje);
-                fimObj.setDate(fimObj.getDate() + 7); // daqui a 7 dias
+                fimObj.setDate(fimObj.getDate() + 7);
                 const dataFim = fimObj.toISOString().split('T')[0];
 
-                // URL sem restrição rígida de timezone na string da API, mas com season=2026
-                const urlChamada = `${BASE_URL}/fixtures?league=${ligaId}&season=2026&from=${dataInicio}&to=${dataFim}`;
-                
-                console.log("A chamar:", urlChamada);
+                const urlChamada = `${BASE_URL}/fixtures?league=${ligaId}&season=${temporadaLiga}&from=${dataInicio}&to=${dataFim}`;
                 
                 const res = await fetch(urlChamada, {
                     method: 'GET',
@@ -212,7 +210,6 @@
                 });
                 
                 const data = await res.json();
-                console.log("Resposta API:", data);
 
                 if (data.errors && data.errors.requests) {
                     mostrarToast('Limite diário da API atingido.', 'error');
@@ -223,30 +220,22 @@
                 const jogos = data.response;
 
                 if (!jogos || jogos.length === 0) {
-                    // Tentar alternativa: buscar os próximos jogos da liga sem filtro de data (live/next)
-                    divResultados.innerHTML = `
-                        <div style="background: #252525; padding: 15px; border-radius: 8px; text-align: center;">
-                            <p style="color: var(--orange); margin-bottom: 10px;">Nenhum jogo encontrado na janela de datas (${dataInicio} a ${dataFim}).</p>
-                            <p style="font-size: 0.8em; color: #aaa;">A tentar buscar por 'next=10' na API...</p>
-                        </div>
-                    `;
-                    
-                    // Segunda tentativa: buscar os próximos 10 jogos direto da liga
-                    const resNext = await fetch(`${BASE_URL}/fixtures?league=${ligaId}&season=2026&next=10`, {
+                    // Tentativa de fallback com next=10 utilizando a temporada correta
+                    const resNext = await fetch(`${BASE_URL}/fixtures?league=${ligaId}&season=${temporadaLiga}&next=10`, {
                         headers: headersAPI
                     });
                     const dataNext = await resNext.json();
                     
                     if (dataNext.response && dataNext.response.length > 0) {
                         divResultados.innerHTML = '';
-                        dataNext.response.forEach(jogo => renderizarCard(jogo, ligaId, 2026));
-                        mostrarToast('Jogos carregados via próximo calendário!', 'success');
+                        dataNext.response.forEach(jogo => renderizarCard(jogo, ligaId, temporadaLiga));
+                        mostrarToast('Jogos carregados com sucesso!', 'success');
                         return;
                     } else {
-                        divResultados.innerHTML = `<p style="text-align:center; padding: 20px; background: #252525; border-radius: 8px; color: var(--red);">A API retornou zero jogos para a Série B (Season 2026). Verifique se o ID da liga ou a temporada na API-Football é 2025/2026.</p>`;
+                        divResultados.innerHTML = `<p style="text-align:center; padding: 20px; background: #252525; border-radius: 8px; color: var(--orange);">Nenhum jogo encontrado para esta liga na temporada ${temporadaLiga}.</p>`;
                     }
                 } else {
-                    jogos.forEach(jogo => renderizarCard(jogo, ligaId, 2026));
+                    jogos.forEach(jogo => renderizarCard(jogo, ligaId, temporadaLiga));
                 }
             } catch (error) {
                 console.error(error);
@@ -374,7 +363,7 @@
                         <div class="prob-bar" style="width: ${probEmpate}%; background: #444;"></div>
                         <div class="prob-bar" style="width: ${probFora}%; background: var(--orange);"></div>
                     </div>
-                    <div class="stats"><span style="color:var(--green)">% Casa</span><span>EMP ${probEmpate}%</span><span style="color:var(--orange)">${probFora}% Fora</span></div>
+                    <div class="stats"><span style="color:var(--green)">${probCasa}% Casa</span><span>EMP ${probEmpate}%</span><span style="color:var(--orange)">${probFora}% Fora</span></div>
                     
                     <div class="market-grid">
                         <div class="market-item"><span>Média Gols Feitos</span> <span>${lambdaCasa.toFixed(1)} x ${lambdaFora.toFixed(1)}</span></div>
