@@ -146,7 +146,7 @@
         </select>
     </div>
 
-    <button id="btnEscanear" class="btn-scan" onclick="buscarJogos()">Carregar Jogos (Hoje e Próximos dias)</button>
+    <button id="btnEscanear" class="btn-scan" onclick="buscarJogos()">Carregar Jogos da Série B</button>
 
     <div id="listaResultados" class="resultados"></div>
 
@@ -189,17 +189,30 @@
             divResultados.innerHTML = '';
 
             try {
-                const dataBR = new Date(new Date().toLocaleString("en-US", {timeZone: "America/Sao_Paulo"}));
-                const dataHoje = dataBR.getFullYear() + "-" + String(dataBR.getMonth() + 1).padStart(2, '0') + "-" + String(dataBR.getDate()).padStart(2, '0');
+                // Força o ano correto de 2026 e data precisa baseada no fuso do Brasil
+                const agora = new Date();
+                const options = { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit' };
+                const partesData = new Intl.DateTimeFormat('en-CA', options).formatToParts(agora);
                 
-                const dataFuturoObj = new Date(dataBR);
-                dataFuturoObj.setDate(dataFuturoObj.getDate() + 3);
-                const dataFuturo = dataFuturoObj.getFullYear() + "-" + String(dataFuturoObj.getMonth() + 1).padStart(2, '0') + "-" + String(dataFuturoObj.getDate()).padStart(2, '0');
+                const ano = partesData.find(p => p.type === 'year').value;
+                const mes = partesData.find(p => p.type === 'month').value;
+                const dia = partesData.find(p => p.type === 'day').value;
                 
-                const anoAtual = dataBR.getFullYear();
+                const dataHoje = `${ano}-${mes}-${dia}`;
                 
-                // INCLUSÃO OBRIGATÓRIA DA TEMPORADA (SEASON) PARA LIGAS DO BRASIL E INTERNACIONAIS NA API-FOOTBALL
-                const res = await fetch(`${BASE_URL}/fixtures?league=${ligaId}&season=${anoAtual}&from=${dataHoje}&to=${dataFuturo}&timezone=America/Sao_Paulo`, {
+                // Janela de 4 dias para garantir que apanha os jogos
+                const dataFuturoObj = new Date(agora);
+                dataFuturoObj.setDate(dataFuturoObj.getDate() + 4);
+                const partesFuturo = new Intl.DateTimeFormat('en-CA', options).formatToParts(dataFuturoObj);
+                const anoF = partesFuturo.find(p => p.type === 'year').value;
+                const mesF = partesFuturo.find(p => p.type === 'month').value;
+                const diaF = partesFuturo.find(p => p.type === 'day').value;
+                const dataFuturo = `${anoF}-${mesF}-${diaF}`;
+
+                // URL com temporada fixa 2026 e datas exatas
+                const urlChamada = `${BASE_URL}/fixtures?league=${ligaId}&season=2026&from=${dataHoje}&to=${dataFuturo}&timezone=America/Sao_Paulo`;
+                
+                const res = await fetch(urlChamada, {
                     method: 'GET',
                     headers: headersAPI
                 });
@@ -215,16 +228,16 @@
                 const jogos = data.response;
 
                 if (!jogos || jogos.length === 0) {
-                    divResultados.innerHTML = `<p style="text-align:center; padding: 20px; background: #252525; border-radius: 8px;">Nenhum jogo encontrado para esta liga nos próximos dias.</p>`;
+                    divResultados.innerHTML = `<p style="text-align:center; padding: 20px; background: #252525; border-radius: 8px;">Nenhum jogo encontrado para esta liga nestes dias.</p>`;
                 } else {
-                    jogos.forEach(jogo => renderizarCard(jogo, ligaId, anoAtual));
+                    jogos.forEach(jogo => renderizarCard(jogo, ligaId, 2026));
                 }
             } catch (error) {
                 console.error(error);
                 divResultados.innerHTML = `<p style="color:red; text-align:center;">Erro de ligação. Verifique a Vercel!</p>`;
             } finally {
                 btn.disabled = false;
-                btn.innerText = 'Carregar Jogos (Hoje e Próximos dias)';
+                btn.innerText = 'Carregar Jogos da Série B';
             }
         }
 
