@@ -1,8 +1,8 @@
 {
   "rewrites": [
     {
-      "source": "/api/football/:match*",
-      "destination": "https://api.football-data.org/v4/:match*"
+      "source": "/api/football/:path*",
+      "destination": "https://v3.football.api-sports.io/:path*"
     }
   ],
   "crons": [
