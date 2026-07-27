@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Victor Tips - Diagnóstico API</title>
+    <title>Victor Tips - Radar Pro (API Premium)</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root { --primary: #00d1b2; --bg: #121212; --card: #1e1e1e; --green: #2ecc71; --orange: #f39c12; --red: #e74c3c; --gold: #ffd700; }
@@ -78,19 +78,75 @@
 
     <div class="header">
         <h1>Victor Tips 🎯</h1>
-        <p>Motor de Diagnóstico (Busca por País)</p>
+        <p>Motor de Análise Premium (API-Football)</p>
     </div>
 
     <div class="filter-container">
-        <label>Modo de Diagnóstico</label>
+        <label>Selecione a Liga</label>
         <select id="filtroLiga">
-            <option value="BR">🇧🇷 Buscar TODOS os jogos do Brasil hoje (Ignora ID)</option>
-            <option value="72">Brasileirão - Série B (ID Original 72)</option>
-            <option value="71">Brasileirão - Série A (ID 71)</option>
+            <optgroup label="🌎 Competições Internacionais">
+                <option value="13">🏆 Copa Libertadores</option>
+                <option value="11">🏆 Copa Sul-Americana</option>
+                <option value="2">⭐ Champions League</option>
+                <option value="3">🇪🇺 Europa League</option>
+            </optgroup>
+            
+            <optgroup label="🇧🇷 Brasil">
+                <option value="71">Brasileirão - Série A</option>
+                <option value="72" selected>Brasileirão - Série B</option>
+                <option value="73">Copa do Brasil</option>
+            </optgroup>
+
+            <optgroup label="🏴󠁧󠁢󠁥󠁮󠁧󠁿 Inglaterra">
+                <option value="39">Premier League</option>
+                <option value="40">Championship (2ª Divisão)</option>
+                <option value="41">League One (3ª Divisão)</option>
+                <option value="42">League Two (4ª Divisão)</option>
+                <option value="45">FA Cup</option>
+            </optgroup>
+
+            <optgroup label="🇪🇸 Espanha">
+                <option value="140">La Liga</option>
+                <option value="141">La Liga 2 (Segunda)</option>
+                <option value="143">Copa do Rei</option>
+            </optgroup>
+
+            <optgroup label="🇮🇹 Itália">
+                <option value="135">Serie A</option>
+                <option value="136">Serie B</option>
+                <option value="137">Coppa Italia</option>
+            </optgroup>
+
+            <optgroup label="🇩🇪 Alemanha">
+                <option value="78">Bundesliga</option>
+                <option value="79">2. Bundesliga</option>
+                <option value="81">DFB Pokal (Copa)</option>
+            </optgroup>
+
+            <optgroup label="🇫🇷 França">
+                <option value="61">Ligue 1</option>
+                <option value="62">Ligue 2</option>
+                <option value="66">Copa da França</option>
+            </optgroup>
+
+            <optgroup label="🇵🇹 Portugal">
+                <option value="94">Primeira Liga</option>
+                <option value="95">Segunda Liga</option>
+            </optgroup>
+
+            <optgroup label="🌍 Outras Ligas Populares">
+                <option value="88">🇳🇱 Eredivisie (Holanda)</option>
+                <option value="128">🇦🇷 Liga Profissional (Argentina)</option>
+                <option value="253">🇺🇸 MLS (EUA)</option>
+                <option value="307">🇸🇦 Pro League (Arábia Saudita)</option>
+                <option value="262">🇲🇽 Liga MX (México)</option>
+                <option value="233">🇪🇬 Premier League (Egito)</option>
+                <option value="113">🇸🇪 Allsvenskan (Suécia)</option>
+            </optgroup>
         </select>
     </div>
 
-    <button id="btnEscanear" class="btn-scan" onclick="buscarJogos()">Executar Diagnóstico de Jogos</button>
+    <button id="btnEscanear" class="btn-scan" onclick="buscarJogos()">Carregar Jogos da Liga</button>
 
     <div id="listaResultados" class="resultados"></div>
 
@@ -126,67 +182,76 @@
         async function buscarJogos() {
             const btn = document.getElementById('btnEscanear');
             const divResultados = document.getElementById('listaResultados');
-            const opcao = document.getElementById('filtroLiga').value;
+            const ligaId = document.getElementById('filtroLiga').value;
             
             btn.disabled = true;
-            btn.innerText = 'A executar diagnóstico...';
+            btn.innerText = 'A consultar API-Football...';
             divResultados.innerHTML = '';
 
             try {
+                let temporadasParaTestar = ['2026', '2025'];
+                if (['71', '72', '73'].includes(ligaId)) {
+                    temporadasParaTestar = ['2025', '2026'];
+                }
+
+                let jogosEncontrados = [];
+                let temporadaUsada = '';
+
                 const hoje = new Date();
-                const dataHoje = hoje.toISOString().split('T')[0];
+                const inicioObj = new Date(hoje);
+                inicioObj.setDate(inicioObj.getDate() - 3);
+                const dataInicio = inicioObj.toISOString().split('T')[0];
                 
-                let urlChamada = '';
-                
-                if (opcao === 'BR') {
-                    // Busca por país e data diretamente, sem travar em IDs de liga
-                    urlChamada = `${BASE_URL}/fixtures?country=Brazil&date=${dataHoje}`;
+                const fimObj = new Date(hoje);
+                fimObj.setDate(fimObj.getDate() + 7);
+                const dataFim = fimObj.toISOString().split('T')[0];
+
+                for (let temp of temporadasParaTestar) {
+                    const urlChamada = `${BASE_URL}/fixtures?league=${ligaId}&season=${temp}&from=${dataInicio}&to=${dataFim}`;
+                    const res = await fetch(urlChamada, { method: 'GET', headers: headersAPI });
+                    const data = await res.json();
+                    
+                    if (data.response && data.response.length > 0) {
+                        jogosEncontrados = data.response;
+                        temporadaUsada = temp;
+                        break;
+                    }
+                }
+
+                if (jogosEncontrados.length === 0) {
+                    for (let temp of temporadasParaTestar) {
+                        const urlNext = `${BASE_URL}/fixtures?league=${ligaId}&season=${temp}&next=10`;
+                        const resNext = await fetch(urlNext, { headers: headersAPI });
+                        const dataNext = await resNext.json();
+                        
+                        if (dataNext.response && dataNext.response.length > 0) {
+                            jogosEncontrados = dataNext.response;
+                            temporadaUsada = temp;
+                            break;
+                        }
+                    }
+                }
+
+                if (jogosEncontrados.length === 0) {
+                    divResultados.innerHTML = `<p style="text-align:center; padding: 20px; background: #252525; border-radius: 8px; color: var(--orange);">Nenhum jogo encontrado para esta liga no momento.</p>`;
                 } else {
-                    urlChamada = `${BASE_URL}/fixtures?league=${opcao}&season=2026&date=${dataHoje}`;
+                    jogosEncontrados.forEach(jogo => renderizarCard(jogo, ligaId, temporadaUsada));
+                    mostrarToast(`Jogos carregados com sucesso!`, 'success');
                 }
 
-                console.log("URL de Diagnóstico:", urlChamada);
-                
-                const res = await fetch(urlChamada, {
-                    method: 'GET',
-                    headers: headersAPI
-                });
-                
-                const data = await res.json();
-                console.log("Resposta Completa da API:", data);
-
-                if (data.errors && data.errors.requests) {
-                    mostrarToast('Limite diário da API atingido.', 'error');
-                    divResultados.innerHTML = `<p style="color:var(--orange); text-align:center;">Limite da API atingido.</p>`;
-                    return;
-                }
-
-                const jogos = data.response;
-
-                if (!jogos || jogos.length === 0) {
-                    divResultados.innerHTML = `<p style="text-align:center; padding: 20px; background: #252525; border-radius: 8px; color: var(--orange);">Nenhum jogo encontrado para hoje com este parâmetro. Verifique a consola (F12) para detalhes do JSON.</p>`;
-                } else {
-                    mostrarToast(`Encontrados ${jogos.length} jogos!`, 'success');
-                    jogos.forEach(jogo => {
-                        // Mostrar o ID da liga no card para sabermos exatamente qual é o ID correto na API
-                        const ligaIdReal = jogo.league.id;
-                        const ligaNomeReal = jogo.league.name;
-                        const temporadaReal = jogo.league.season;
-                        renderizarCardDiagnostico(jogo, ligaIdReal, ligaNomeReal, temporadaReal);
-                    });
-                }
             } catch (error) {
                 console.error(error);
                 divResultados.innerHTML = `<p style="color:red; text-align:center;">Erro de ligação. Verifique a consola (F12).</p>`;
             } finally {
                 btn.disabled = false;
-                btn.innerText = 'Executar Diagnóstico de Jogos';
+                btn.innerText = 'Carregar Jogos da Liga';
             }
         }
 
-        function renderizarCardDiagnostico(jogoCompleto, ligaId, ligaNome, temporada) {
+        function renderizarCard(jogoCompleto, ligaId, temporada) {
             const jogo = jogoCompleto.fixture;
             const times = jogoCompleto.teams;
+            const liga = jogoCompleto.league;
 
             const timeCasa = times.home.name;
             const timeFora = times.away.name;
@@ -195,7 +260,14 @@
             const idJogoAPI = jogo.id; 
             
             const dataJogo = new Date(jogo.date);
+            const diaMes = dataJogo.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
             const hora = dataJogo.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+            
+            let infoTempo = `${diaMes} às ${hora}`;
+            const status = jogo.status.short;
+            
+            if (['1H', '2H', 'HT', 'ET', 'P'].includes(status)) infoTempo = '🔴 AO VIVO';
+            if (['FT', 'AET', 'PEN'].includes(status)) infoTempo = `Encerrado (${diaMes})`;
             
             const idCard = `jogo_${jogo.id}`;
             const card = document.createElement('div');
@@ -203,7 +275,7 @@
             card.id = idCard;
             
             card.innerHTML = `
-                <div class="liga-tag">${ligaNome} (ID: ${ligaId} | Temp: ${temporada}) • 🗓️ ${hora}</div>
+                <div class="liga-tag">${liga.name} • 🗓️ ${infoTempo}</div>
                 <div class="confronto">
                     <span class="time" style="color:var(--green)">${timeCasa}</span>
                     <span style="color:#666; font-size: 0.8em; padding: 0 10px;">X</span>
