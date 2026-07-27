@@ -154,7 +154,8 @@
 
     <script>
         const API_KEY = '1b71c21e279516252b170cfc1fcb803d'; 
-        const BASE_URL = '/api/football';
+        // Usamos chamada direta para evitar bloqueio de proxy na Vercel caso o vercel.json não esteja ativo
+        const BASE_URL = 'https://v3.football.api-sports.io';
         
         const SUPABASE_URL = 'https://tvdwgfytguwlsppvjvkk.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR2ZHdnZnl0Z3V3bHNwcHZqdmtrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY1Njk0OTEsImV4cCI6MjA5MjE0NTQ5MX0.mKbLRjWV3eoeAxUtMX-yY24hZQ-mN0aEtnhxk2pH5Us';
@@ -241,7 +242,7 @@
 
             } catch (error) {
                 console.error(error);
-                divResultados.innerHTML = `<p style="color:red; text-align:center;">Erro de ligação. Verifique a consola (F12).</p>`;
+                divResultados.innerHTML = `<p style="color:red; text-align:center;">Erro de ligação. Verifique a consola (F12) para detalhes de CORS.</p>`;
             } finally {
                 btn.disabled = false;
                 btn.innerText = 'Carregar Jogos da Liga';
