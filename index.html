@@ -150,12 +150,21 @@
 
     <div id="listaResultados" class="resultados"></div>
 
+    <footer style="text-align: center; margin-top: 40px; padding: 15px; font-size: 0.75em; color: #777; border-top: 1px solid #222;">
+        Victor Tips 🎯 • Última atualização do sistema: <span id="data-atualizacao">A carregar...</span>
+    </footer>
+
     <div id="toast-container"></div>
 
     <script>
+        // Exibe dinamicamente a data e hora atual do sistema no rodapé
+        const dataAtual = new Date();
+        const formatada = dataAtual.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        const horaFormatada = dataAtual.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        document.getElementById('data-atualizacao').innerText = `${formatada} às ${horaFormatada}`;
+
         const API_KEY = '1b71c21e279516252b170cfc1fcb803d'; 
-        // Usamos chamada direta para evitar bloqueio de proxy na Vercel caso o vercel.json não esteja ativo
-        const BASE_URL = 'https://v3.football.api-sports.io';
+        const BASE_URL = '/api/football';
         
         const SUPABASE_URL = 'https://tvdwgfytguwlsppvjvkk.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR2ZHdnZnl0Z3V3bHNwcHZqdmtrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY1Njk0OTEsImV4cCI6MjA5MjE0NTQ5MX0.mKbLRjWV3eoeAxUtMX-yY24hZQ-mN0aEtnhxk2pH5Us';
@@ -242,7 +251,7 @@
 
             } catch (error) {
                 console.error(error);
-                divResultados.innerHTML = `<p style="color:red; text-align:center;">Erro de ligação. Verifique a consola (F12) para detalhes de CORS.</p>`;
+                divResultados.innerHTML = `<p style="color:red; text-align:center;">Erro de ligação. Verifique a consola (F12).</p>`;
             } finally {
                 btn.disabled = false;
                 btn.innerText = 'Carregar Jogos da Liga';
