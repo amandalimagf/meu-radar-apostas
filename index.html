@@ -163,14 +163,15 @@
         document.getElementById('data-atualizacao').innerText = `${formatada} às ${horaFormatada}`;
 
         const API_KEY = '1b71c21e279516252b170cfc1fcb803d'; 
-        const BASE_URL = 'https://v3.football.api-sports.io';
+        const PROXY_URL = '/api/football';
         
         const SUPABASE_URL = 'https://tvdwgfytguwlsppvjvkk.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR2ZHdnZnl0Z3V3bHNwcHZqdmtrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY1Njk0OTEsImV4cCI6MjA5MjE0NTQ5MX0.mKbLRjWV3eoeAxUtMX-yY24hZQ-mN0aEtnhxk2pH5Us';
         const clienteSupabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
         const headersAPI = {
-            'x-apisports-key': API_KEY
+            'x-apisports-key': API_KEY,
+            'x-rapidapi-key': API_KEY
         };
 
         function mostrarToast(mensagem, tipo = 'info') {
@@ -216,9 +217,12 @@
                 const dataFim = fimObj.toISOString().split('T')[0];
 
                 for (let temp of temporadasParaTestar) {
-                    const urlChamada = `${BASE_URL}/fixtures?league=${ligaId}&season=${temp}&from=${dataInicio}&to=${dataFim}`;
+                    const urlChamada = `${PROXY_URL}/fixtures?league=${ligaId}&season=${temp}&from=${dataInicio}&to=${dataFim}`;
+                    console.log("A testar Proxy URL:", urlChamada);
+                    
                     const res = await fetch(urlChamada, { method: 'GET', headers: headersAPI });
                     const data = await res.json();
+                    console.log("Resposta do Proxy:", data);
                     
                     if (data.response && data.response.length > 0) {
                         jogosEncontrados = data.response;
@@ -229,7 +233,7 @@
 
                 if (jogosEncontrados.length === 0) {
                     for (let temp of temporadasParaTestar) {
-                        const urlNext = `${BASE_URL}/fixtures?league=${ligaId}&season=${temp}&next=10`;
+                        const urlNext = `${PROXY_URL}/fixtures?league=${ligaId}&season=${temp}&next=10`;
                         const resNext = await fetch(urlNext, { headers: headersAPI });
                         const dataNext = await resNext.json();
                         
@@ -304,7 +308,7 @@
             botao.innerText = '⏳ A analisar Dados...';
 
             try {
-                const res = await fetch(`${BASE_URL}/standings?league=${ligaId}&season=${temporada}`, {
+                const res = await fetch(`${PROXY_URL}/standings?league=${ligaId}&season=${temporada}`, {
                     headers: headersAPI
                 });
                 const data = await res.json();
