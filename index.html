@@ -198,8 +198,8 @@
                 
                 const anoAtual = dataBR.getFullYear();
                 
-                // BUSCA FLEXÍVEL: Removemos o parâmetro 'season' para evitar conflito de ano na API
-                const res = await fetch(`${BASE_URL}/fixtures?league=${ligaId}&from=${dataHoje}&to=${dataFuturo}&timezone=America/Sao_Paulo`, {
+                // INCLUSÃO OBRIGATÓRIA DA TEMPORADA (SEASON) PARA LIGAS DO BRASIL E INTERNACIONAIS NA API-FOOTBALL
+                const res = await fetch(`${BASE_URL}/fixtures?league=${ligaId}&season=${anoAtual}&from=${dataHoje}&to=${dataFuturo}&timezone=America/Sao_Paulo`, {
                     method: 'GET',
                     headers: headersAPI
                 });
@@ -275,7 +275,6 @@
             botao.innerText = '⏳ A analisar Dados...';
 
             try {
-                // Na extração da tabela usamos o ano atual e uma verificação flexível caso a temporada mude
                 const res = await fetch(`${BASE_URL}/standings?league=${ligaId}&season=${temporada}`, {
                     headers: headersAPI
                 });
