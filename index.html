@@ -78,7 +78,7 @@
 
     <div class="header">
         <h1>Victor Tips 🎯</h1>
-        <p>Motor de Análise Premium (API-Football)</p>
+        <p>Motor de Análise Premium (API-Football) - v2.6</p>
     </div>
 
     <div class="filter-container">
@@ -189,54 +189,64 @@
             divResultados.innerHTML = '';
 
             try {
-                // Correção Inteligente de Temporada para a API-Football:
-                // Ligas do Brasil (Série A, Série B, Copa do Brasil) estão mapeadas na base de dados da API como 2025.
-                let temporadaLiga = ['71', '72', '73'].includes(ligaId) ? '2025' : '2026';
+                // Tentar primeiro com temporada 2025 (padrão Brasil na API), se falhar, tenta 2026
+                let temporadasParaTestar = ['2025', '2026'];
+                if (!['71', '72', '73'].includes(ligaId)) {
+                    temporadasParaTestar = ['2026', '2025'];
+                }
+
+                let jogosEncontrados = [];
+                let temporadaUsada = '';
 
                 const hoje = new Date();
                 const inicioObj = new Date(hoje);
-                inicioObj.setDate(inicioObj.getDate() - 2);
+                inicioObj.setDate(inicioObj.getDate() - 3);
                 const dataInicio = inicioObj.toISOString().split('T')[0];
                 
                 const fimObj = new Date(hoje);
                 fimObj.setDate(fimObj.getDate() + 7);
                 const dataFim = fimObj.toISOString().split('T')[0];
 
-                const urlChamada = `${BASE_URL}/fixtures?league=${ligaId}&season=${temporadaLiga}&from=${dataInicio}&to=${dataFim}`;
-                
-                const res = await fetch(urlChamada, {
-                    method: 'GET',
-                    headers: headersAPI
-                });
-                
-                const data = await res.json();
-
-                if (data.errors && data.errors.requests) {
-                    mostrarToast('Limite diário da API atingido.', 'error');
-                    divResultados.innerHTML = `<p style="color:var(--orange); text-align:center;">Limite da API atingido.</p>`;
-                    return;
-                }
-
-                const jogos = data.response;
-
-                if (!jogos || jogos.length === 0) {
-                    // Fallback com next=10 utilizando a temporada correta (2025 para o Brasil)
-                    const resNext = await fetch(`${BASE_URL}/fixtures?league=${ligaId}&season=${temporadaLiga}&next=10`, {
+                for (let temp of temporadasParaTestar) {
+                    const urlChamada = `${BASE_URL}/fixtures?league=${ligaId}&season=${temp}&from=${dataInicio}&to=${dataFim}`;
+                    console.log("A testar URL:", urlChamada);
+                    
+                    const res = await fetch(urlChamada, {
+                        method: 'GET',
                         headers: headersAPI
                     });
-                    const dataNext = await resNext.json();
                     
-                    if (dataNext.response && dataNext.response.length > 0) {
-                        divResultados.innerHTML = '';
-                        dataNext.response.forEach(jogo => renderizarCard(jogo, ligaId, temporadaLiga));
-                        mostrarToast('Jogos carregados com sucesso!', 'success');
-                        return;
-                    } else {
-                        divResultados.innerHTML = `<p style="text-align:center; padding: 20px; background: #252525; border-radius: 8px; color: var(--orange);">Nenhum jogo encontrado para esta liga na temporada ${temporadaLiga}.</p>`;
+                    const data = await res.json();
+                    
+                    if (data.response && data.response.length > 0) {
+                        jogosEncontrados = data.response;
+                        temporadaUsada = temp;
+                        break;
                     }
-                } else {
-                    jogos.forEach(jogo => renderizarCard(jogo, ligaId, temporadaLiga));
                 }
+
+                // Se por data não veio nada, tenta o endpoint 'next=10' com as temporadas
+                if (jogosEncontrados.length === 0) {
+                    for (let temp of temporadasParaTestar) {
+                        const urlNext = `${BASE_URL}/fixtures?league=${ligaId}&season=${temp}&next=10`;
+                        const resNext = await fetch(urlNext, { headers: headersAPI });
+                        const dataNext = await resNext.json();
+                        
+                        if (dataNext.response && dataNext.response.length > 0) {
+                            jogosEncontrados = dataNext.response;
+                            temporadaUsada = temp;
+                            break;
+                        }
+                    }
+                }
+
+                if (jogosEncontrados.length === 0) {
+                    divResultados.innerHTML = `<p style="text-align:center; padding: 20px; background: #252525; border-radius: 8px; color: var(--orange);">Nenhum jogo encontrado nas temporadas testadas (2025/2026) para esta liga.</p>`;
+                } else {
+                    jogosEncontrados.forEach(jogo => renderizarCard(jogo, ligaId, temporadaUsada));
+                    mostrarToast(`Jogos carregados com sucesso! (Temporada ${temporadaUsada})`, 'success');
+                }
+
             } catch (error) {
                 console.error(error);
                 divResultados.innerHTML = `<p style="color:red; text-align:center;">Erro de ligação. Verifique a consola do navegador (F12).</p>`;
