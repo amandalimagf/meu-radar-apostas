@@ -189,8 +189,9 @@
             divResultados.innerHTML = '';
 
             try {
-                // Temporada fixa em 2026 para corresponder ao ano atual da nossa plataforma e à base de dados da API
-                const temporadaLiga = '2026';
+                // Correção Inteligente de Temporada para a API-Football:
+                // Ligas do Brasil (Série A, Série B, Copa do Brasil) estão mapeadas na base de dados da API como 2025.
+                let temporadaLiga = ['71', '72', '73'].includes(ligaId) ? '2025' : '2026';
 
                 const hoje = new Date();
                 const inicioObj = new Date(hoje);
@@ -219,7 +220,7 @@
                 const jogos = data.response;
 
                 if (!jogos || jogos.length === 0) {
-                    // Tentativa de fallback com next=10 utilizando a temporada 2026
+                    // Fallback com next=10 utilizando a temporada correta (2025 para o Brasil)
                     const resNext = await fetch(`${BASE_URL}/fixtures?league=${ligaId}&season=${temporadaLiga}&next=10`, {
                         headers: headersAPI
                     });
