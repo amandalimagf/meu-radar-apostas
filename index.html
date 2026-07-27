@@ -93,7 +93,7 @@
             
             <optgroup label="🇧🇷 Brasil">
                 <option value="71">Brasileirão - Série A</option>
-                <option value="72">Brasileirão - Série B</option>
+                <option value="72" selected>Brasileirão - Série B</option>
                 <option value="73">Copa do Brasil</option>
             </optgroup>
 
@@ -187,14 +187,17 @@
             const ligaId = document.getElementById('filtroLiga').value;
             
             btn.disabled = true;
-            btn.innerText = 'Consultando Jogos...';
+            btn.innerText = 'A consultar Jogos...';
             divResultados.innerHTML = '';
 
             try {
-                const dataHoje = new Date().toISOString().split('T')[0];
-                const anoAtual = new Date().getFullYear();
+                // CORREÇÃO: Forçar a data baseada no fuso horário do Brasil para evitar que jogos noturnos desapareçam
+                const dataBR = new Date(new Date().toLocaleString("en-US", {timeZone: "America/Sao_Paulo"}));
+                const dataHoje = dataBR.getFullYear() + "-" + String(dataBR.getMonth() + 1).padStart(2, '0') + "-" + String(dataBR.getDate()).padStart(2, '0');
+                const anoAtual = dataBR.getFullYear();
                 
-                const res = await fetch(`${BASE_URL}/fixtures?league=${ligaId}&season=${anoAtual}&date=${dataHoje}`, {
+                // Adicionado o parâmetro timezone=America/Sao_Paulo à chamada da API
+                const res = await fetch(`${BASE_URL}/fixtures?league=${ligaId}&season=${anoAtual}&date=${dataHoje}&timezone=America/Sao_Paulo`, {
                     method: 'GET',
                     headers: headersAPI
                 });
@@ -215,7 +218,7 @@
                     jogos.forEach(jogo => renderizarCard(jogo, ligaId, anoAtual));
                 }
             } catch (error) {
-                divResultados.innerHTML = `<p style="color:red; text-align:center;">Erro de conexão. Verifique a Vercel!</p>`;
+                divResultados.innerHTML = `<p style="color:red; text-align:center;">Erro de ligação. Verifique a Vercel!</p>`;
             } finally {
                 btn.disabled = false;
                 btn.innerText = 'Atualizar Lista de Jogos';
@@ -266,7 +269,7 @@
         async function gerarAnaliseMatematicaReal(botao, idCard, ligaId, idCasa, idFora, timeCasa, timeFora, idJogoAPI, dataHoraReal, temporada) {
             const painel = document.getElementById(`analise_${idCard}`);
             botao.disabled = true;
-            botao.innerText = '⏳ Analisando Dados...';
+            botao.innerText = '⏳ A analisar Dados...';
 
             try {
                 const res = await fetch(`${BASE_URL}/standings?league=${ligaId}&season=${temporada}`, {
@@ -375,7 +378,7 @@
 
         async function salvarAposta(casa, fora, pC, pE, pF, sug, idJogoAPI, dataHoraReal, btn) {
             btn.disabled = true;
-            btn.innerText = "Verificando...";
+            btn.innerText = "A verificar...";
 
             try {
                 const { data: jogoExistente, error: erroBusca } = await clienteSupabase
@@ -393,7 +396,7 @@
                     return; 
                 }
 
-                btn.innerText = "Salvando...";
+                btn.innerText = "A guardar...";
                 
                 const { error: erroSalvar } = await clienteSupabase.from('partidas').insert([{ 
                     time_casa: casa, 
@@ -414,8 +417,8 @@
                 btn.style.color = "#121212";
 
             } catch (erro) {
-                mostrarToast('Erro de conexão com o Supabase.', 'error');
-                btn.innerText = "Erro ao Salvar"; 
+                mostrarToast('Erro de ligação com o Supabase.', 'error');
+                btn.innerText = "Erro ao Guardar"; 
                 btn.style.background = "var(--red)"; 
                 btn.disabled = false;
             }
