@@ -146,18 +146,16 @@
         </select>
     </div>
 
-    <button id="btnEscanear" class="btn-scan" onclick="buscarJogos()">Carregar Jogos de Hoje</button>
+    <button id="btnEscanear" class="btn-scan" onclick="buscarJogos()">Carregar Jogos (Hoje e Próximos dias)</button>
 
     <div id="listaResultados" class="resultados"></div>
 
     <div id="toast-container"></div>
 
     <script>
-        // NOVA API KEY:
         const API_KEY = '1b71c21e279516252b170cfc1fcb803d'; 
         const BASE_URL = '/api/football';
         
-        // Supabase
         const SUPABASE_URL = 'https://tvdwgfytguwlsppvjvkk.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR2ZHdnZnl0Z3V3bHNwcHZqdmtrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY1Njk0OTEsImV4cCI6MjA5MjE0NTQ5MX0.mKbLRjWV3eoeAxUtMX-yY24hZQ-mN0aEtnhxk2pH5Us';
         const clienteSupabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -191,13 +189,17 @@
             divResultados.innerHTML = '';
 
             try {
-                // CORREÇÃO: Forçar a data baseada no fuso horário do Brasil para evitar que jogos noturnos desapareçam
                 const dataBR = new Date(new Date().toLocaleString("en-US", {timeZone: "America/Sao_Paulo"}));
                 const dataHoje = dataBR.getFullYear() + "-" + String(dataBR.getMonth() + 1).padStart(2, '0') + "-" + String(dataBR.getDate()).padStart(2, '0');
+                
+                const dataFuturoObj = new Date(dataBR);
+                dataFuturoObj.setDate(dataFuturoObj.getDate() + 3);
+                const dataFuturo = dataFuturoObj.getFullYear() + "-" + String(dataFuturoObj.getMonth() + 1).padStart(2, '0') + "-" + String(dataFuturoObj.getDate()).padStart(2, '0');
+                
                 const anoAtual = dataBR.getFullYear();
                 
-                // Adicionado o parâmetro timezone=America/Sao_Paulo à chamada da API
-                const res = await fetch(`${BASE_URL}/fixtures?league=${ligaId}&season=${anoAtual}&date=${dataHoje}&timezone=America/Sao_Paulo`, {
+                // BUSCA FLEXÍVEL: Removemos o parâmetro 'season' para evitar conflito de ano na API
+                const res = await fetch(`${BASE_URL}/fixtures?league=${ligaId}&from=${dataHoje}&to=${dataFuturo}&timezone=America/Sao_Paulo`, {
                     method: 'GET',
                     headers: headersAPI
                 });
@@ -205,7 +207,7 @@
                 const data = await res.json();
 
                 if (data.errors && data.errors.requests) {
-                    mostrarToast('Atingiu o limite gratuito de hoje (100 requisições).', 'error');
+                    mostrarToast('Atingiu o limite diário da API.', 'error');
                     divResultados.innerHTML = `<p style="color:var(--orange); text-align:center;">Limite da API atingido.</p>`;
                     return;
                 }
@@ -213,15 +215,16 @@
                 const jogos = data.response;
 
                 if (!jogos || jogos.length === 0) {
-                    divResultados.innerHTML = `<p style="text-align:center; padding: 20px; background: #252525; border-radius: 8px;">Nenhum jogo agendado nesta liga para o dia de hoje.</p>`;
+                    divResultados.innerHTML = `<p style="text-align:center; padding: 20px; background: #252525; border-radius: 8px;">Nenhum jogo encontrado para esta liga nos próximos dias.</p>`;
                 } else {
                     jogos.forEach(jogo => renderizarCard(jogo, ligaId, anoAtual));
                 }
             } catch (error) {
+                console.error(error);
                 divResultados.innerHTML = `<p style="color:red; text-align:center;">Erro de ligação. Verifique a Vercel!</p>`;
             } finally {
                 btn.disabled = false;
-                btn.innerText = 'Atualizar Lista de Jogos';
+                btn.innerText = 'Carregar Jogos (Hoje e Próximos dias)';
             }
         }
 
@@ -272,6 +275,7 @@
             botao.innerText = '⏳ A analisar Dados...';
 
             try {
+                // Na extração da tabela usamos o ano atual e uma verificação flexível caso a temporada mude
                 const res = await fetch(`${BASE_URL}/standings?league=${ligaId}&season=${temporada}`, {
                     headers: headersAPI
                 });
@@ -359,7 +363,7 @@
                         </div>
                     </div>
                     
-                    <button class="btn-save" onclick="salvarAposta('${timeCasa}','${timeFora}',${probCasa},${probEmpate},${probFora},'${sugestao}', ${idJogoAPI}, '${dataHoraReal}', this)">💾 Salvar no Histórico</button>
+                    <button class="btn-save" onclick="salvarAposta('${timeCasa}','${timeFora}',${probCasa},${probEmpate},${probFora},'${sugestao}', ${idJogoAPI}, '${dataHoraReal}', this)">💾 Guardar no Histórico</button>
                 `;
                 
                 painel.style.display = 'block';
