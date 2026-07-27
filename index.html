@@ -28,6 +28,8 @@
         .filter-container { background: var(--card); padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #333; }
         label { display: block; margin-bottom: 8px; font-size: 0.8em; color: #aaa; text-transform: uppercase; font-weight: bold; }
         select { width: 100%; padding: 12px; background: #2a2a2a; color: white; border: 1px solid #444; border-radius: 8px; font-size: 1em; cursor: pointer; }
+        optgroup { font-weight: bold; color: var(--primary); background: #1e1e1e; }
+        option { color: white; background: #2a2a2a; }
 
         .btn-scan { width: 100%; padding: 16px; background: var(--primary); border: none; border-radius: 10px; color: #121212; font-weight: bold; font-size: 1.1em; cursor: pointer; transition: 0.2s; }
         .btn-scan:disabled { background: #555; color: #888; cursor: not-allowed; }
@@ -82,15 +84,65 @@
     <div class="filter-container">
         <label>Selecione a Liga</label>
         <select id="filtroLiga">
-            <option value="71">🇧🇷 Brasileirão Série A</option>
-            <option value="39">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League</option>
-            <option value="40">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Championship (ING 2)</option>
-            <option value="140">🇪🇸 La Liga</option>
-            <option value="78">🇩🇪 Bundesliga</option>
-            <option value="135">🇮🇹 Serie A (Itália)</option>
-            <option value="61">🇫🇷 Ligue 1</option>
-            <option value="94">🇵🇹 Primeira Liga</option>
-            <option value="2">⭐ Champions League</option>
+            <optgroup label="🌎 Competições Internacionais">
+                <option value="13">🏆 Copa Libertadores</option>
+                <option value="11">🏆 Copa Sul-Americana</option>
+                <option value="2">⭐ Champions League</option>
+                <option value="3">🇪🇺 Europa League</option>
+            </optgroup>
+            
+            <optgroup label="🇧🇷 Brasil">
+                <option value="71">Brasileirão - Série A</option>
+                <option value="72">Brasileirão - Série B</option>
+                <option value="73">Copa do Brasil</option>
+            </optgroup>
+
+            <optgroup label="🏴󠁧󠁢󠁥󠁮󠁧󠁿 Inglaterra">
+                <option value="39">Premier League</option>
+                <option value="40">Championship (2ª Divisão)</option>
+                <option value="41">League One (3ª Divisão)</option>
+                <option value="42">League Two (4ª Divisão)</option>
+                <option value="45">FA Cup</option>
+            </optgroup>
+
+            <optgroup label="🇪🇸 Espanha">
+                <option value="140">La Liga</option>
+                <option value="141">La Liga 2 (Segunda)</option>
+                <option value="143">Copa do Rei</option>
+            </optgroup>
+
+            <optgroup label="🇮🇹 Itália">
+                <option value="135">Serie A</option>
+                <option value="136">Serie B</option>
+                <option value="137">Coppa Italia</option>
+            </optgroup>
+
+            <optgroup label="🇩🇪 Alemanha">
+                <option value="78">Bundesliga</option>
+                <option value="79">2. Bundesliga</option>
+                <option value="81">DFB Pokal (Copa)</option>
+            </optgroup>
+
+            <optgroup label="🇫🇷 França">
+                <option value="61">Ligue 1</option>
+                <option value="62">Ligue 2</option>
+                <option value="66">Copa da França</option>
+            </optgroup>
+
+            <optgroup label="🇵🇹 Portugal">
+                <option value="94">Primeira Liga</option>
+                <option value="95">Segunda Liga</option>
+            </optgroup>
+
+            <optgroup label="🌍 Outras Ligas Populares">
+                <option value="88">🇳🇱 Eredivisie (Holanda)</option>
+                <option value="128">🇦🇷 Liga Profissional (Argentina)</option>
+                <option value="253">🇺🇸 MLS (EUA)</option>
+                <option value="307">🇸🇦 Pro League (Arábia Saudita)</option>
+                <option value="262">🇲🇽 Liga MX (México)</option>
+                <option value="233">🇪🇬 Premier League (Egito)</option>
+                <option value="113">🇸🇪 Allsvenskan (Suécia)</option>
+            </optgroup>
         </select>
     </div>
 
@@ -101,16 +153,15 @@
     <div id="toast-container"></div>
 
     <script>
-        // NOVA API KEY AQUI:
+        // NOVA API KEY:
         const API_KEY = '1b71c21e279516252b170cfc1fcb803d'; 
         const BASE_URL = '/api/football';
         
-        // Supabase continua igual
+        // Supabase
         const SUPABASE_URL = 'https://tvdwgfytguwlsppvjvkk.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR2ZHdnZnl0Z3V3bHNwcHZqdmtrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY1Njk0OTEsImV4cCI6MjA5MjE0NTQ5MX0.mKbLRjWV3eoeAxUtMX-yY24hZQ-mN0aEtnhxk2pH5Us';
         const clienteSupabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        // NOVA FORMA DE ENVIAR A CHAVE PARA A API-FOOTBALL
         const headersAPI = {
             'x-apisports-key': API_KEY
         };
@@ -140,12 +191,10 @@
             divResultados.innerHTML = '';
 
             try {
-                // Pega a data de hoje no formato YYYY-MM-DD
                 const dataHoje = new Date().toISOString().split('T')[0];
                 const anoAtual = new Date().getFullYear();
                 
-                // Chamada ajustada para o formato da nova API
-                const res = await fetch(`${BASE_URL}/fixtures?league=${ligaId}&season=2024&date=${dataHoje}`, {
+                const res = await fetch(`${BASE_URL}/fixtures?league=${ligaId}&season=${anoAtual}&date=${dataHoje}`, {
                     method: 'GET',
                     headers: headersAPI
                 });
@@ -220,8 +269,7 @@
             botao.innerText = '⏳ Analisando Dados...';
 
             try {
-                // Nova chamada para Standings (Tabela) na API-Football
-                const res = await fetch(`${BASE_URL}/standings?league=${ligaId}&season=2024`, {
+                const res = await fetch(`${BASE_URL}/standings?league=${ligaId}&season=${temporada}`, {
                     headers: headersAPI
                 });
                 const data = await res.json();
@@ -246,7 +294,6 @@
                     });
                 }
 
-                // Limitações matemáticas para manter a sanidade do cálculo
                 lambdaCasa = Math.min(Math.max(lambdaCasa, 0.5), 3.0);
                 lambdaFora = Math.min(Math.max(lambdaFora, 0.5), 3.0);
 
