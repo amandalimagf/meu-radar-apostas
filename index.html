@@ -1,1077 +1,363 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-br">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Victor Tips - análise estatística de partidas de futebol.">
-  <title>Victor Tips - Radar Pro</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Victor Tips - Radar Pro</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root { --primary: #00d1b2; --bg: #121212; --card: #1e1e1e; --green: #2ecc71; --orange: #f39c12; --red: #e74c3c; --gold: #ffd700; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, sans-serif; 
+            background: linear-gradient(rgba(18, 18, 18, 0.85), rgba(18, 18, 18, 0.95)), url('logo.jpg') no-repeat center center fixed;
+            background-size: cover;
+            color: white; 
+            padding: 15px; 
+            max-width: 600px; 
+            margin: auto; 
+        }
+        
+        .nav-menu { display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; overflow-x: auto; padding-bottom: 10px; }
+        .nav-menu a { color: white; text-decoration: none; padding: 10px 15px; background: #333; border-radius: 8px; font-weight: bold; white-space: nowrap; transition: 0.2s; }
+        .nav-menu a.active { background: var(--primary); color: #121212; }
 
-  <style>
-    :root {
-      --primary: #00d1b2;
-      --bg: #121212;
-      --card: #1e1e1e;
-      --green: #2ecc71;
-      --orange: #f39c12;
-      --red: #e74c3c;
-      --gold: #ffd700;
-    }
+        .header { text-align: center; margin-bottom: 20px; }
+        h1 { color: var(--primary); margin: 0; font-size: 1.8em; }
+        p { color: #aaa; font-size: 0.85em; margin-top: 5px; }
+        
+        .filter-container { background: var(--card); padding: 15px; border-radius: 12px; margin-bottom: 20px; border: 1px solid #333; }
+        label { display: block; margin-bottom: 8px; font-size: 0.8em; color: #aaa; text-transform: uppercase; font-weight: bold; }
+        select { width: 100%; padding: 12px; background: #2a2a2a; color: white; border: 1px solid #444; border-radius: 8px; font-size: 1em; cursor: pointer; }
 
-    * {
-      box-sizing: border-box;
-    }
+        .btn-scan { width: 100%; padding: 16px; background: var(--primary); border: none; border-radius: 10px; color: #121212; font-weight: bold; font-size: 1.1em; cursor: pointer; transition: 0.2s; }
+        .btn-scan:disabled { background: #555; color: #888; cursor: not-allowed; }
 
-    body {
-      min-height: 100vh;
-      max-width: 600px;
-      margin: auto;
-      padding: 15px;
-      color: white;
-      background:
-        linear-gradient(rgba(18, 18, 18, 0.85), rgba(18, 18, 18, 0.95)),
-        url('logo.jpg') no-repeat center center fixed;
-      background-size: cover;
-      font-family: 'Segoe UI', Tahoma, sans-serif;
-    }
+        .resultados { margin-top: 20px; display: flex; flex-direction: column; gap: 15px; }
+        .match-card { background: var(--card); padding: 15px; border-radius: 12px; border-left: 4px solid var(--primary); }
+        
+        .liga-tag { font-size: 0.7em; color: var(--primary); background: rgba(0,209,178,0.1); padding: 4px 8px; border-radius: 4px; display: inline-block; margin-bottom: 10px; font-weight: bold; }
+        .confronto { font-size: 1.1em; font-weight: bold; display: flex; justify-content: space-between; margin-bottom: 15px; align-items: center; }
+        .time { flex: 1; text-align: center; }
+        
+        .btn-analisar { width: 100%; padding: 12px; background: #2a2a2a; color: var(--primary); border: 1px solid var(--primary); border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        .btn-analisar:hover { background: var(--primary); color: #121212; }
+        .btn-analisar:disabled { border-color: #555; color: #888; }
 
-    .nav-menu {
-      display: flex;
-      justify-content: center;
-      gap: 10px;
-      margin-bottom: 20px;
-      padding-bottom: 10px;
-      overflow-x: auto;
-    }
+        .painel-analise { display: none; margin-top: 15px; border-top: 1px solid #333; padding-top: 15px;}
+        
+        .prob-bar-container { display: flex; height: 10px; border-radius: 5px; overflow: hidden; background: #333; margin-bottom: 5px; }
+        .prob-bar { height: 100%; }
+        .stats { display: flex; justify-content: space-between; font-size: 0.85em; color: #ccc; margin-bottom: 15px; font-weight: bold;}
+        
+        .market-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+        .market-item { background: #252525; padding: 10px; border-radius: 8px; font-size: 0.85em; border: 1px solid #333; }
+        .market-item span { display: block; }
+        .market-item span:first-child { color: #aaa; margin-bottom: 4px; font-size: 0.9em; }
+        .market-item span:last-child { color: var(--primary); font-weight: bold; font-size: 1.1em; }
 
-    .nav-menu a {
-      padding: 10px 15px;
-      color: white;
-      background: #333;
-      border-radius: 8px;
-      font-weight: bold;
-      text-decoration: none;
-      white-space: nowrap;
-      transition: 0.2s;
-    }
+        .sugestao { padding: 12px; border-radius: 8px; font-size: 1em; text-align: center; margin-bottom: 15px; transition: 0.3s; }
+        .btn-save { width: 100%; padding: 12px; background: #333; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; }
 
-    .nav-menu a.active {
-      color: #121212;
-      background: var(--primary);
-    }
-
-    .header {
-      margin-bottom: 20px;
-      text-align: center;
-    }
-
-    h1 {
-      margin: 0;
-      color: var(--primary);
-      font-size: 1.8rem;
-    }
-
-    p {
-      margin-top: 5px;
-      color: #aaa;
-      font-size: 0.85rem;
-    }
-
-    .filter-container {
-      margin-bottom: 20px;
-      padding: 15px;
-      background: var(--card);
-      border: 1px solid #333;
-      border-radius: 12px;
-    }
-
-    label {
-      display: block;
-      margin-bottom: 8px;
-      color: #aaa;
-      font-size: 0.8rem;
-      font-weight: bold;
-      text-transform: uppercase;
-    }
-
-    select {
-      width: 100%;
-      padding: 12px;
-      color: white;
-      background: #2a2a2a;
-      border: 1px solid #444;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 1rem;
-    }
-
-    optgroup {
-      color: var(--primary);
-      background: #1e1e1e;
-      font-weight: bold;
-    }
-
-    option {
-      color: white;
-      background: #2a2a2a;
-    }
-
-    .btn-scan {
-      width: 100%;
-      padding: 16px;
-      color: #121212;
-      background: var(--primary);
-      border: none;
-      border-radius: 10px;
-      cursor: pointer;
-      font-size: 1.1rem;
-      font-weight: bold;
-      transition: 0.2s;
-    }
-
-    .btn-scan:disabled,
-    .btn-analisar:disabled,
-    .btn-save:disabled {
-      color: #888;
-      background: #555;
-      border-color: #555;
-      cursor: not-allowed;
-    }
-
-    .resultados {
-      display: flex;
-      flex-direction: column;
-      gap: 15px;
-      margin-top: 20px;
-    }
-
-    .match-card {
-      padding: 15px;
-      background: var(--card);
-      border-left: 4px solid var(--primary);
-      border-radius: 12px;
-    }
-
-    .liga-tag {
-      display: inline-block;
-      margin-bottom: 10px;
-      padding: 4px 8px;
-      color: var(--primary);
-      background: rgba(0, 209, 178, 0.1);
-      border-radius: 4px;
-      font-size: 0.7rem;
-      font-weight: bold;
-    }
-
-    .confronto {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 15px;
-      font-size: 1.1rem;
-      font-weight: bold;
-    }
-
-    .time {
-      flex: 1;
-      text-align: center;
-    }
-
-    .btn-analisar {
-      width: 100%;
-      padding: 12px;
-      color: var(--primary);
-      background: #2a2a2a;
-      border: 1px solid var(--primary);
-      border-radius: 8px;
-      cursor: pointer;
-      font-weight: bold;
-      transition: 0.2s;
-    }
-
-    .btn-analisar:hover:not(:disabled) {
-      color: #121212;
-      background: var(--primary);
-    }
-
-    .painel-analise {
-      display: none;
-      margin-top: 15px;
-      padding-top: 15px;
-      border-top: 1px solid #333;
-    }
-
-    .prob-bar-container {
-      display: flex;
-      height: 10px;
-      margin-bottom: 5px;
-      overflow: hidden;
-      background: #333;
-      border-radius: 5px;
-    }
-
-    .prob-bar {
-      height: 100%;
-    }
-
-    .stats {
-      display: flex;
-      justify-content: space-between;
-      margin-bottom: 15px;
-      color: #ccc;
-      font-size: 0.85rem;
-      font-weight: bold;
-    }
-
-    .market-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      margin-bottom: 15px;
-    }
-
-    .market-item {
-      padding: 10px;
-      background: #252525;
-      border: 1px solid #333;
-      border-radius: 8px;
-      font-size: 0.85rem;
-    }
-
-    .market-item span {
-      display: block;
-    }
-
-    .market-item span:first-child {
-      margin-bottom: 4px;
-      color: #aaa;
-      font-size: 0.9rem;
-    }
-
-    .market-item span:last-child {
-      color: var(--primary);
-      font-size: 1.1rem;
-      font-weight: bold;
-    }
-
-    .sugestao {
-      margin-bottom: 15px;
-      padding: 12px;
-      border-radius: 8px;
-      font-size: 1rem;
-      text-align: center;
-      transition: 0.3s;
-    }
-
-    .btn-save {
-      width: 100%;
-      padding: 12px;
-      color: white;
-      background: #333;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      font-weight: bold;
-    }
-
-    .mensagem {
-      padding: 20px;
-      background: #252525;
-      border: 1px dashed #555;
-      border-radius: 8px;
-      text-align: center;
-    }
-
-    .mensagem.erro {
-      border-color: var(--red);
-    }
-
-    .mensagem.aviso {
-      border-color: var(--orange);
-    }
-
-    .mensagem strong {
-      display: block;
-      margin-bottom: 8px;
-    }
-
-    .mensagem.erro strong {
-      color: var(--red);
-    }
-
-    .mensagem.aviso strong {
-      color: var(--orange);
-    }
-
-    #toast-container {
-      position: fixed;
-      right: 20px;
-      bottom: 20px;
-      z-index: 9999;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .toast {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 12px 20px;
-      color: white;
-      border-radius: 8px;
-      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
-      font-family: 'Segoe UI', sans-serif;
-      font-weight: bold;
-      transform: translateX(120%);
-      transition: transform 0.3s ease-in-out;
-    }
-
-    .toast.show {
-      transform: translateX(0);
-    }
-
-    .toast.success {
-      background: #2ecc71;
-    }
-
-    .toast.error {
-      background: #e74c3c;
-    }
-
-    .toast.info {
-      background: #3498db;
-    }
-
-    footer {
-      margin-top: 40px;
-      padding: 15px;
-      color: #777;
-      border-top: 1px solid #222;
-      font-size: 0.75rem;
-      text-align: center;
-    }
-
-    @media (max-width: 430px) {
-      .market-grid {
-        grid-template-columns: 1fr;
-      }
-
-      .stats {
-        gap: 5px;
-        font-size: 0.75rem;
-      }
-    }
-  </style>
+        /* Estilos do Toast (Notificação) */
+        #toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
+        .toast { padding: 12px 20px; border-radius: 8px; color: white; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.3); transform: translateX(120%); transition: transform 0.3s ease-in-out; display: flex; align-items: center; gap: 10px; font-family: 'Segoe UI', sans-serif;}
+        .toast.show { transform: translateX(0); }
+        .toast.success { background: #2ecc71; }
+        .toast.error { background: #e74c3c; }
+        .toast.info { background: #3498db; }
+    </style>
 </head>
-
 <body>
-  <nav class="nav-menu" aria-label="Navegação principal">
-    <a href="index.html" class="active">Radar Pro</a>
-    <a href="historico.html">Meu Histórico</a>
-  </nav>
 
-  <header class="header">
-    <h1>Victor Tips 🎯</h1>
-    <p>Motor de análise estatística com dados da API-Football</p>
-  </header>
+    <div class="nav-menu">
+        <a href="index.html" class="active">Radar Pro</a>
+        <a href="historico.html">Meu Histórico</a>
+    </div>
 
-  <main>
-    <section class="filter-container">
-      <label for="filtroLiga">Selecione a liga</label>
-      <select id="filtroLiga">
-        <optgroup label="🌎 Competições Internacionais">
-          <option value="13">🏆 Copa Libertadores</option>
-          <option value="11">🏆 Copa Sul-Americana</option>
-          <option value="2">⭐ Champions League</option>
-          <option value="3">🇪🇺 Europa League</option>
-        </optgroup>
+    <div class="header">
+        <h1>Victor Tips 🎯</h1>
+        <p>Estatísticas puxadas da Tabela de Classificação Real</p>
+    </div>
 
-        <optgroup label="🇧🇷 Brasil">
-          <option value="71" selected>Brasileirão - Série A</option>
-          <option value="72">Brasileirão - Série B</option>
-          <option value="73">Copa do Brasil</option>
-        </optgroup>
+    <div class="filter-container">
+        <label>Ligas Garantidas (Dados Reais)</label>
+        <select id="filtroLiga">
+            <option value="BSA">🇧🇷 Brasileirão Série A</option>
+            <option value="PL">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League</option>
+            <option value="ELC">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Championship (ING 2)</option>
+            <option value="PD">🇪🇸 La Liga</option>
+            <option value="BL1">🇩🇪 Bundesliga</option>
+            <option value="SA">🇮🇹 Serie A (Itália)</option>
+            <option value="FL1">🇫🇷 Ligue 1</option>
+            <option value="PPL">🇵🇹 Primeira Liga</option>
+            <option value="DED">🇳🇱 Eredivisie (Holanda)</option>
+            <option value="CL">⭐ Champions League</option>
+        </select>
+    </div>
 
-        <optgroup label="🏴 Inglaterra">
-          <option value="39">Premier League</option>
-          <option value="40">Championship (2ª Divisão)</option>
-          <option value="41">League One (3ª Divisão)</option>
-          <option value="42">League Two (4ª Divisão)</option>
-          <option value="45">FA Cup</option>
-        </optgroup>
+    <button id="btnEscanear" class="btn-scan" onclick="buscarJogos()">Carregar Jogos de Hoje</button>
 
-        <optgroup label="🇪🇸 Espanha">
-          <option value="140">La Liga</option>
-          <option value="141">La Liga 2 (Segunda)</option>
-          <option value="143">Copa do Rei</option>
-        </optgroup>
+    <div id="listaResultados" class="resultados"></div>
 
-        <optgroup label="🇮🇹 Itália">
-          <option value="135">Serie A</option>
-          <option value="136">Serie B</option>
-          <option value="137">Coppa Italia</option>
-        </optgroup>
+    <div id="toast-container"></div>
 
-        <optgroup label="🇩🇪 Alemanha">
-          <option value="78">Bundesliga</option>
-          <option value="79">2. Bundesliga</option>
-          <option value="81">DFB Pokal (Copa)</option>
-        </optgroup>
+    <script>
+        const API_KEY = 'b9ba384b106c433686606c4dfa53261a'; 
+        const BASE_URL = '/api/football';
+        const SUPABASE_URL = 'https://tvdwgfytguwlsppvjvkk.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR2ZHdnZnl0Z3V3bHNwcHZqdmtrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY1Njk0OTEsImV4cCI6MjA5MjE0NTQ5MX0.mKbLRjWV3eoeAxUtMX-yY24hZQ-mN0aEtnhxk2pH5Us';
+        const clienteSupabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        <optgroup label="🇫🇷 França">
-          <option value="61">Ligue 1</option>
-          <option value="62">Ligue 2</option>
-          <option value="66">Copa da França</option>
-        </optgroup>
-
-        <optgroup label="🇵🇹 Portugal">
-          <option value="94">Primeira Liga</option>
-          <option value="95">Segunda Liga</option>
-        </optgroup>
-
-        <optgroup label="🌍 Outras Ligas Populares">
-          <option value="88">🇳🇱 Eredivisie (Holanda)</option>
-          <option value="128">🇦🇷 Liga Profissional (Argentina)</option>
-          <option value="253">🇺🇸 MLS (EUA)</option>
-          <option value="307">🇸🇦 Pro League (Arábia Saudita)</option>
-          <option value="262">🇲🇽 Liga MX (México)</option>
-          <option value="233">🇪🇬 Premier League (Egito)</option>
-          <option value="113">🇸🇪 Allsvenskan (Suécia)</option>
-        </optgroup>
-      </select>
-    </section>
-
-    <button id="btnEscanear" class="btn-scan" type="button">
-      Carregar próximos jogos
-    </button>
-
-    <section
-      id="listaResultados"
-      class="resultados"
-      aria-live="polite"
-    ></section>
-  </main>
-
-  <footer>
-    Victor Tips 🎯 • Dados esportivos fornecidos pela API-Football
-  </footer>
-
-  <div id="toast-container" aria-live="assertive"></div>
-
-  <script>
-    // A chave anon do Supabase pode aparecer no frontend, mas a tabela precisa
-    // estar protegida por políticas de RLS no painel do Supabase.
-    const SUPABASE_URL = 'https://tvdwgfytguwlsppvjvkk.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR2ZHdnZnl0Z3V3bHNwcHZqdmtrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY1Njk0OTEsImV4cCI6MjA5MjE0NTQ5MX0.mKbLRjWV3eoeAxUtMX-yY24hZQ-mN0aEtnhxk2pH5Us';
-
-    const clienteSupabase = window.supabase.createClient(
-      SUPABASE_URL,
-      SUPABASE_ANON_KEY,
-    );
-
-    const btnEscanear = document.getElementById('btnEscanear');
-    const listaResultados = document.getElementById('listaResultados');
-
-    btnEscanear.addEventListener('click', buscarJogos);
-
-    function mostrarToast(mensagem, tipo = 'info') {
-      const container = document.getElementById('toast-container');
-      const toast = document.createElement('div');
-      const icone = tipo === 'success' ? '✅' : tipo === 'error' ? '⚠️' : 'ℹ️';
-
-      toast.className = `toast ${tipo}`;
-
-      const spanIcone = document.createElement('span');
-      const spanMensagem = document.createElement('span');
-      spanIcone.textContent = icone;
-      spanMensagem.textContent = mensagem;
-
-      toast.append(spanIcone, spanMensagem);
-      container.appendChild(toast);
-
-      setTimeout(() => toast.classList.add('show'), 10);
-      setTimeout(() => {
-        toast.classList.remove('show');
-        setTimeout(() => toast.remove(), 300);
-      }, 3500);
-    }
-
-    function obterMensagemErro(dados, status) {
-      if (!dados) return `Erro HTTP ${status}.`;
-
-      if (typeof dados.detalhes === 'string') {
-        return dados.detalhes;
-      }
-
-      if (dados.detalhes && typeof dados.detalhes === 'object') {
-        return JSON.stringify(dados.detalhes);
-      }
-
-      return dados.erro || `Erro HTTP ${status}.`;
-    }
-
-    async function consultarBackend(action, parametros = {}) {
-      const query = new URLSearchParams({ action, ...parametros });
-      const resposta = await fetch(`/api/football?${query.toString()}`, {
-        method: 'GET',
-        headers: { Accept: 'application/json' },
-      });
-
-      let dados = null;
-
-      try {
-        dados = await resposta.json();
-      } catch {
-        throw new Error(`O servidor devolveu uma resposta inválida (${resposta.status}).`);
-      }
-
-      if (!resposta.ok) {
-        throw new Error(obterMensagemErro(dados, resposta.status));
-      }
-
-      return dados;
-    }
-
-    function mostrarMensagem(tipo, titulo, texto) {
-      listaResultados.innerHTML = '';
-
-      const bloco = document.createElement('div');
-      const strong = document.createElement('strong');
-      const paragrafo = document.createElement('p');
-
-      bloco.className = `mensagem ${tipo}`;
-      strong.textContent = titulo;
-      paragrafo.textContent = texto;
-
-      bloco.append(strong, paragrafo);
-      listaResultados.appendChild(bloco);
-    }
-
-    async function buscarJogos() {
-      const ligaId = document.getElementById('filtroLiga').value;
-
-      btnEscanear.disabled = true;
-      btnEscanear.textContent = 'A carregar os jogos...';
-      listaResultados.innerHTML = '';
-
-      try {
-        const dados = await consultarBackend('fixtures', {
-          league: ligaId,
-          limit: '15',
-        });
-
-        const jogos = Array.isArray(dados.response) ? dados.response : [];
-
-        if (jogos.length === 0) {
-          mostrarMensagem(
-            'aviso',
-            'Nenhum próximo jogo encontrado',
-            'A API não devolveu partidas futuras para esta liga no momento.',
-          );
-          return;
+        // --- FUNÇÃO DO TOAST (ALERTAS) ---
+        function mostrarToast(mensagem, tipo = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast ${tipo}`;
+            const icone = tipo === 'success' ? '✅' : tipo === 'error' ? '⚠️' : 'ℹ️';
+            toast.innerHTML = `<span>${icone}</span> <span>${mensagem}</span>`;
+            
+            container.appendChild(toast);
+            
+            setTimeout(() => { toast.classList.add('show'); }, 10);
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => { toast.remove(); }, 300);
+            }, 3000);
         }
 
-        jogos
-          .sort(
-            (a, b) =>
-              new Date(a.fixture.date).getTime() -
-              new Date(b.fixture.date).getTime(),
-          )
-          .forEach(renderizarCard);
+        async function buscarJogos() {
+            const btn = document.getElementById('btnEscanear');
+            const divResultados = document.getElementById('listaResultados');
+            const ligaId = document.getElementById('filtroLiga').value;
+            
+            btn.disabled = true;
+            btn.innerText = 'Consultando Jogos Reais...';
+            divResultados.innerHTML = '';
 
-        mostrarToast(`${jogos.length} jogo(s) carregado(s).`, 'success');
-      } catch (erro) {
-        console.error('Erro ao buscar jogos:', erro);
+            try {
+                const dataHoje = new Date();
+                const hoje = dataHoje.toLocaleDateString('en-CA'); 
+                const dataFim = new Date(dataHoje);
+                dataFim.setDate(dataFim.getDate() + 3);
+                const futuro = dataFim.toLocaleDateString('en-CA');
+                
+                const res = await fetch(`${BASE_URL}/matches?competitions=${ligaId}&dateFrom=${hoje}&dateTo=${futuro}`, {
+                    method: 'GET',
+                    headers: { 'X-Auth-Token': API_KEY }
+                });
+                
+                const data = await res.json();
 
-        mostrarMensagem(
-          'erro',
-          'Não foi possível carregar os jogos',
-          erro instanceof Error ? erro.message : String(erro),
-        );
-      } finally {
-        btnEscanear.disabled = false;
-        btnEscanear.textContent = 'Carregar próximos jogos';
-      }
-    }
+                if (data.errorCode) {
+                    divResultados.innerHTML = `<p style="color:var(--orange); text-align:center;">Erro da API: ${data.message}</p>`;
+                    return;
+                }
 
-    function renderizarCard(jogoCompleto) {
-      const jogo = jogoCompleto.fixture;
-      const times = jogoCompleto.teams;
-      const liga = jogoCompleto.league;
+                const jogos = data.matches;
 
-      if (!jogo || !times?.home || !times?.away || !liga) return;
-
-      const timeCasa = times.home.name;
-      const timeFora = times.away.name;
-      const idCasa = Number(times.home.id);
-      const idFora = Number(times.away.id);
-      const idJogoAPI = Number(jogo.id);
-      const ligaId = Number(liga.id);
-      const temporada = Number(liga.season);
-
-      const dataJogo = new Date(jogo.date);
-      const dataFormatada = dataJogo.toLocaleDateString('pt-BR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-      });
-      const horaFormatada = dataJogo.toLocaleTimeString('pt-BR', {
-        hour: '2-digit',
-        minute: '2-digit',
-      });
-
-      let infoTempo = `${dataFormatada} às ${horaFormatada}`;
-      const status = jogo.status?.short || 'NS';
-
-      if (['1H', '2H', 'HT', 'ET', 'P', 'BT'].includes(status)) {
-        infoTempo = '🔴 AO VIVO';
-      } else if (['FT', 'AET', 'PEN'].includes(status)) {
-        infoTempo = `Encerrado em ${dataFormatada}`;
-      }
-
-      const card = document.createElement('article');
-      const ligaTag = document.createElement('div');
-      const confronto = document.createElement('div');
-      const casa = document.createElement('span');
-      const versus = document.createElement('span');
-      const fora = document.createElement('span');
-      const botao = document.createElement('button');
-      const painel = document.createElement('div');
-
-      card.className = 'match-card';
-      ligaTag.className = 'liga-tag';
-      confronto.className = 'confronto';
-      casa.className = 'time';
-      fora.className = 'time';
-      botao.className = 'btn-analisar';
-      painel.className = 'painel-analise';
-
-      ligaTag.textContent = `${liga.name} • Temporada ${temporada} • 🗓️ ${infoTempo}`;
-      casa.textContent = timeCasa;
-      casa.style.color = 'var(--green)';
-      versus.textContent = 'X';
-      versus.style.color = '#666';
-      versus.style.fontSize = '0.8rem';
-      versus.style.padding = '0 10px';
-      fora.textContent = timeFora;
-      fora.style.color = 'var(--orange)';
-      botao.type = 'button';
-      botao.textContent = '🎯 Extrair tabela e analisar';
-
-      confronto.append(casa, versus, fora);
-      card.append(ligaTag, confronto, botao, painel);
-      listaResultados.appendChild(card);
-
-      botao.addEventListener('click', () => {
-        gerarAnaliseMatematicaReal({
-          botao,
-          painel,
-          ligaId,
-          temporada,
-          idCasa,
-          idFora,
-          timeCasa,
-          timeFora,
-          idJogoAPI,
-          dataHoraReal: jogo.date,
-        });
-      });
-    }
-
-    function numeroSeguro(valor, padrao = 0) {
-      const numero = Number(valor);
-      return Number.isFinite(numero) ? numero : padrao;
-    }
-
-    function media(valorA, valorB) {
-      return (numeroSeguro(valorA) + numeroSeguro(valorB)) / 2;
-    }
-
-    function limitar(valor, minimo, maximo) {
-      return Math.min(Math.max(valor, minimo), maximo);
-    }
-
-    function porcentagem(valor) {
-      return Math.round(valor * 100);
-    }
-
-    async function gerarAnaliseMatematicaReal({
-      botao,
-      painel,
-      ligaId,
-      temporada,
-      idCasa,
-      idFora,
-      timeCasa,
-      timeFora,
-      idJogoAPI,
-      dataHoraReal,
-    }) {
-      botao.disabled = true;
-      botao.textContent = '⏳ A analisar os dados...';
-
-      try {
-        const dados = await consultarBackend('standings', {
-          league: String(ligaId),
-          season: String(temporada),
-        });
-
-        const grupos = dados.response?.[0]?.league?.standings;
-
-        if (!Array.isArray(grupos) || grupos.length === 0) {
-          throw new Error(
-            'Esta competição não possui tabela classificatória disponível para a temporada.',
-          );
+                if (!jogos || jogos.length === 0) {
+                    divResultados.innerHTML = `<p style="text-align:center; padding: 20px; background: #252525; border-radius: 8px;">Nenhum jogo agendado nesta liga para os próximos 3 dias.</p>`;
+                } else {
+                    jogos.forEach(jogo => renderizarCard(jogo, ligaId));
+                }
+            } catch (error) {
+                divResultados.innerHTML = `<p style="color:red; text-align:center;">Erro de conexão. Lembre-se de acessar pelo link da Vercel!</p>`;
+            } finally {
+                btn.disabled = false;
+                btn.innerText = 'Atualizar Lista de Jogos';
+            }
         }
 
-        const tabelaCompleta = grupos.flat();
-        const linhaCasa = tabelaCompleta.find(
-          (linha) => Number(linha.team?.id) === idCasa,
-        );
-        const linhaFora = tabelaCompleta.find(
-          (linha) => Number(linha.team?.id) === idFora,
-        );
-
-        if (!linhaCasa || !linhaFora) {
-          throw new Error(
-            'Um ou ambos os times não foram encontrados na tabela desta competição.',
-          );
+        function renderizarCard(jogo, ligaId) {
+            const timeCasa = jogo.homeTeam.shortName || jogo.homeTeam.name;
+            const timeFora = jogo.awayTeam.shortName || jogo.awayTeam.name;
+            const idCasa = jogo.homeTeam.id;
+            const idFora = jogo.awayTeam.id;
+            const idJogoAPI = jogo.id; 
+            
+            const dataJogo = new Date(jogo.utcDate);
+            const diaMes = dataJogo.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+            const hora = dataJogo.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+            
+            let infoTempo = `${diaMes} às ${hora}`;
+            if (jogo.status === 'IN_PLAY') infoTempo = '🔴 AO VIVO';
+            if (jogo.status === 'FINISHED') infoTempo = `Encerrado (${diaMes})`;
+            if (jogo.status === 'PAUSED') infoTempo = '⏸️ INTERVALO';
+            
+            const idCard = `jogo_${jogo.id}`;
+            const card = document.createElement('div');
+            card.className = 'match-card';
+            card.id = idCard;
+            
+            card.innerHTML = `
+                <div class="liga-tag">${jogo.competition.name} • 🗓️ ${infoTempo}</div>
+                <div class="confronto">
+                    <span class="time" style="color:var(--green)">${timeCasa}</span>
+                    <span style="color:#666; font-size: 0.8em; padding: 0 10px;">X</span>
+                    <span class="time" style="color:var(--orange)">${timeFora}</span>
+                </div>
+                <button id="btn_${idCard}" class="btn-analisar" onclick="gerarAnaliseMatematicaReal(this, '${idCard}', '${ligaId}', ${idCasa}, ${idFora}, '${timeCasa}', '${timeFora}', ${idJogoAPI}, '${jogo.utcDate}')">
+                    🎯 Extrair Tabela e Analisar
+                </button>
+                <div class="painel-analise" id="analise_${idCard}"></div>
+            `;
+            document.getElementById('listaResultados').appendChild(card);
         }
 
-        const dadosCasa = linhaCasa.home?.played > 0
-          ? linhaCasa.home
-          : linhaCasa.all;
-        const dadosFora = linhaFora.away?.played > 0
-          ? linhaFora.away
-          : linhaFora.all;
+        async function gerarAnaliseMatematicaReal(botao, idCard, ligaId, idCasa, idFora, timeCasa, timeFora, idJogoAPI, dataHoraReal) {
+            const painel = document.getElementById(`analise_${idCard}`);
+            botao.disabled = true;
+            botao.innerText = '⏳ Lendo Tabela de Classificação...';
 
-        const jogosCasa = numeroSeguro(dadosCasa?.played);
-        const jogosFora = numeroSeguro(dadosFora?.played);
+            try {
+                const res = await fetch(`${BASE_URL}/competitions/${ligaId}/standings`, {
+                    headers: { 'X-Auth-Token': API_KEY }
+                });
+                const data = await res.json();
 
-        if (jogosCasa <= 0 || jogosFora <= 0) {
-          throw new Error(
-            'Ainda não existem partidas suficientes para calcular uma análise confiável.',
-          );
+                let lambdaCasa = 1.0; 
+                let lambdaFora = 1.0;
+                let jogosCasa = 0;
+                let jogosFora = 0;
+
+                if (data.standings) {
+                    data.standings.forEach(grupo => {
+                        grupo.table.forEach(time => {
+                            if (time.team.id === idCasa && time.playedGames > 0) { lambdaCasa = time.goalsFor / time.playedGames; jogosCasa = time.playedGames; }
+                            if (time.team.id === idFora && time.playedGames > 0) { lambdaFora = time.goalsFor / time.playedGames; jogosFora = time.playedGames; }
+                        });
+                    });
+                }
+
+                lambdaCasa = Math.min(Math.max(lambdaCasa, 0.5), 3.0);
+                lambdaFora = Math.min(Math.max(lambdaFora, 0.5), 3.0);
+
+                let pC = 0, pE = 0, pF = 0, btts = 0, o25 = 0;
+                
+                for (let i = 0; i <= 6; i++) {
+                    for (let j = 0; j <= 6; j++) {
+                        let p = poisson(i, lambdaCasa) * poisson(j, lambdaFora);
+                        if (i > j) pC += p; else if (i < j) pF += p; else pE += p;
+                        if (i > 0 && j > 0) btts += p;
+                        if ((i + j) > 2.5) o25 += p;
+                    }
+                }
+
+                const probCasa = Math.round(pC * 100); 
+                const probEmpate = Math.round(pE * 100); 
+                const probFora = Math.round(pF * 100);
+                const probAmbas = Math.round(btts * 100); 
+                const probO25 = Math.round(o25 * 100);
+
+                let sugestao = "Análise Inconclusiva";
+                let probPrincipal = 0;
+
+                if (probCasa > 55 && probCasa >= Math.max(probFora, probO25, probAmbas)) { sugestao = `Vitória ${timeCasa}`; probPrincipal = probCasa; }
+                else if (probFora > 55 && probFora >= Math.max(probCasa, probO25, probAmbas)) { sugestao = `Vitória ${timeFora}`; probPrincipal = probFora; }
+                else if (probO25 > 60 && probO25 >= Math.max(probCasa, probFora, probAmbas)) { sugestao = `Over 2.5 Gols`; probPrincipal = probO25; }
+                else if (probAmbas > 55 && probAmbas >= Math.max(probCasa, probFora, probO25)) { sugestao = `Ambas Marcam (BTTS)`; probPrincipal = probAmbas; }
+                else { sugestao = `Dupla Chance: Casa ou Empate`; probPrincipal = probCasa + probEmpate; }
+
+                let oddJusta = (100 / probPrincipal).toFixed(2);
+                let isDiamante = probPrincipal >= 75;
+                let estiloSugestao = isDiamante 
+                    ? "background: rgba(255, 215, 0, 0.1); border: 2px dashed var(--gold); color: var(--gold);" 
+                    : "background: rgba(0, 209, 178, 0.1); border: 1px dashed var(--primary); color: var(--primary);";
+                let iconeSelo = isDiamante ? "💎 DICA DIAMANTE (Alta Confiança)" : "🎯 Dica do Poisson Real";
+
+                painel.innerHTML = `
+                    <div style="text-align:center; font-size:0.75em; color:#aaa; margin-bottom:10px;">
+                        Baseado em ${jogosCasa} jogos (${timeCasa}) e ${jogosFora} jogos (${timeFora}) na temporada.
+                    </div>
+                    <div class="prob-bar-container">
+                        <div class="prob-bar" style="width: ${probCasa}%; background: var(--green);"></div>
+                        <div class="prob-bar" style="width: ${probEmpate}%; background: #444;"></div>
+                        <div class="prob-bar" style="width: ${probFora}%; background: var(--orange);"></div>
+                    </div>
+                    <div class="stats"><span style="color:var(--green)">${probCasa}% Casa</span><span>EMP ${probEmpate}%</span><span style="color:var(--orange)">${probFora}% Fora</span></div>
+                    
+                    <div class="market-grid">
+                        <div class="market-item"><span>Média Gols Feitos</span> <span>${lambdaCasa.toFixed(1)} x ${lambdaFora.toFixed(1)}</span></div>
+                        <div class="market-item"><span>🤝 Ambas Marcam</span> <span>${probAmbas}%</span></div>
+                        <div class="market-item"><span>⚽ Over 2.5 Gols</span> <span>${probO25}%</span></div>
+                        <div class="market-item"><span>📉 Under 2.5 Gols</span> <span>${100 - probO25}%</span></div>
+                    </div>
+
+                    <div class="sugestao" style="${estiloSugestao}">
+                        <div style="font-size: 0.8em; margin-bottom: 5px; opacity: 0.8;">${iconeSelo}</div>
+                        <strong>${sugestao} (${probPrincipal}%)</strong><br>
+                        <div style="font-size: 0.85em; color: #ccc; margin-top: 8px;">
+                            Odd Justa Mínima: <strong style="color: white; font-size: 1.1em;">${oddJusta}</strong>
+                        </div>
+                    </div>
+                    
+                    <button class="btn-save" onclick="salvarAposta('${timeCasa}','${timeFora}',${probCasa},${probEmpate},${probFora},'${sugestao}', ${idJogoAPI}, '${dataHoraReal}', this)">💾 Salvar no Histórico</button>
+                `;
+                
+                painel.style.display = 'block';
+                botao.style.display = 'none';
+
+            } catch (error) {
+                botao.innerText = '❌ Erro ao extrair tabela';
+                botao.style.borderColor = 'var(--red)';
+                botao.style.color = 'var(--red)';
+            }
         }
 
-        const mediaCasaMarcados =
-          numeroSeguro(dadosCasa.goals?.for) / jogosCasa;
-        const mediaCasaSofridos =
-          numeroSeguro(dadosCasa.goals?.against) / jogosCasa;
-        const mediaForaMarcados =
-          numeroSeguro(dadosFora.goals?.for) / jogosFora;
-        const mediaForaSofridos =
-          numeroSeguro(dadosFora.goals?.against) / jogosFora;
+        function poisson(k, lambda) { return (Math.exp(-lambda) * Math.pow(lambda, k)) / fatorial(k); }
+        function fatorial(n) { if (n === 0 || n === 1) return 1; let r = 1; for (let i = 2; i <= n; i++) r *= i; return r; }
 
-        let lambdaCasa = media(mediaCasaMarcados, mediaForaSofridos);
-        let lambdaFora = media(mediaForaMarcados, mediaCasaSofridos);
+        async function salvarAposta(casa, fora, pC, pE, pF, sug, idJogoAPI, dataHoraReal, btn) {
+            btn.disabled = true;
+            btn.innerText = "Verificando...";
 
-        lambdaCasa = limitar(lambdaCasa, 0.25, 4);
-        lambdaFora = limitar(lambdaFora, 0.25, 4);
+            try {
+                // Verifica se já existe
+                const { data: jogoExistente, error: erroBusca } = await clienteSupabase
+                    .from('partidas')
+                    .select('id')
+                    .eq('id_jogo_api', idJogoAPI);
 
-        let pCasa = 0;
-        let pEmpate = 0;
-        let pFora = 0;
-        let pAmbas = 0;
-        let pOver25 = 0;
-        let massaTotal = 0;
+                if (erroBusca) throw erroBusca;
 
-        for (let golsCasa = 0; golsCasa <= 8; golsCasa += 1) {
-          for (let golsFora = 0; golsFora <= 8; golsFora += 1) {
-            const probabilidade =
-              poisson(golsCasa, lambdaCasa) * poisson(golsFora, lambdaFora);
+                if (jogoExistente && jogoExistente.length > 0) {
+                    mostrarToast('Este jogo já está no seu Histórico!', 'error');
+                    btn.innerText = "⚠️ Já está no Histórico!";
+                    btn.style.background = "var(--orange)";
+                    btn.style.color = "#121212";
+                    return; 
+                }
 
-            massaTotal += probabilidade;
+                btn.innerText = "Salvando...";
+                
+                // Insere no banco
+                const { error: erroSalvar } = await clienteSupabase.from('partidas').insert([{ 
+                    time_casa: casa, 
+                    time_fora: fora, 
+                    prob_vitoria_casa: pC, 
+                    prob_empate: pE, 
+                    prob_vitoria_fora: pF, 
+                    sugestao_aposta: sug, 
+                    id_jogo_api: idJogoAPI,
+                    data_jogo: dataHoraReal 
+                }]);
 
-            if (golsCasa > golsFora) pCasa += probabilidade;
-            else if (golsCasa < golsFora) pFora += probabilidade;
-            else pEmpate += probabilidade;
+                if (erroSalvar) throw erroSalvar;
 
-            if (golsCasa > 0 && golsFora > 0) pAmbas += probabilidade;
-            if (golsCasa + golsFora >= 3) pOver25 += probabilidade;
-          }
+                mostrarToast('Jogo salvo com sucesso! 🚀', 'success');
+                btn.innerText = "Salvo com Sucesso! ✅"; 
+                btn.style.background = "var(--green)"; 
+                btn.style.color = "#121212";
+
+            } catch (erro) {
+                console.error("Erro ao salvar:", erro);
+                mostrarToast('Erro de conexão. O Supabase pode estar pausado.', 'error');
+                btn.innerText = "Erro ao Salvar"; 
+                btn.style.background = "var(--red)"; 
+                btn.disabled = false;
+            }
         }
-
-        if (massaTotal <= 0) {
-          throw new Error('Não foi possível calcular as probabilidades.');
-        }
-
-        pCasa /= massaTotal;
-        pEmpate /= massaTotal;
-        pFora /= massaTotal;
-        pAmbas /= massaTotal;
-        pOver25 /= massaTotal;
-
-        const probCasa = porcentagem(pCasa);
-        const probEmpate = porcentagem(pEmpate);
-        const probFora = porcentagem(pFora);
-        const probAmbas = porcentagem(pAmbas);
-        const probOver25 = porcentagem(pOver25);
-        const probUnder25 = 100 - probOver25;
-        const duplaCasa = Math.min(100, probCasa + probEmpate);
-        const duplaFora = Math.min(100, probFora + probEmpate);
-
-        let sugestao;
-        let probPrincipal;
-
-        if (
-          probCasa >= 55 &&
-          probCasa >= Math.max(probFora, probOver25, probAmbas)
-        ) {
-          sugestao = `Vitória ${timeCasa}`;
-          probPrincipal = probCasa;
-        } else if (
-          probFora >= 55 &&
-          probFora >= Math.max(probCasa, probOver25, probAmbas)
-        ) {
-          sugestao = `Vitória ${timeFora}`;
-          probPrincipal = probFora;
-        } else if (
-          probOver25 >= 60 &&
-          probOver25 >= Math.max(probCasa, probFora, probAmbas)
-        ) {
-          sugestao = 'Over 2.5 gols';
-          probPrincipal = probOver25;
-        } else if (
-          probAmbas >= 55 &&
-          probAmbas >= Math.max(probCasa, probFora, probOver25)
-        ) {
-          sugestao = 'Ambas marcam (BTTS)';
-          probPrincipal = probAmbas;
-        } else if (duplaCasa >= duplaFora) {
-          sugestao = `Dupla chance: ${timeCasa} ou empate`;
-          probPrincipal = duplaCasa;
-        } else {
-          sugestao = `Dupla chance: ${timeFora} ou empate`;
-          probPrincipal = duplaFora;
-        }
-
-        const oddJusta = probPrincipal > 0
-          ? (100 / probPrincipal).toFixed(2)
-          : '—';
-        const isDiamante = probPrincipal >= 75;
-
-        painel.innerHTML = '';
-
-        const base = document.createElement('div');
-        base.style.textAlign = 'center';
-        base.style.fontSize = '0.75rem';
-        base.style.color = '#aaa';
-        base.style.marginBottom = '10px';
-        base.textContent =
-          `Base: ${jogosCasa} jogos do ${timeCasa} como mandante e ` +
-          `${jogosFora} jogos do ${timeFora} como visitante.`;
-
-        const barraContainer = document.createElement('div');
-        barraContainer.className = 'prob-bar-container';
-
-        const barraCasa = document.createElement('div');
-        const barraEmpate = document.createElement('div');
-        const barraFora = document.createElement('div');
-
-        barraCasa.className = 'prob-bar';
-        barraEmpate.className = 'prob-bar';
-        barraFora.className = 'prob-bar';
-        barraCasa.style.width = `${probCasa}%`;
-        barraCasa.style.background = 'var(--green)';
-        barraEmpate.style.width = `${probEmpate}%`;
-        barraEmpate.style.background = '#444';
-        barraFora.style.width = `${probFora}%`;
-        barraFora.style.background = 'var(--orange)';
-        barraContainer.append(barraCasa, barraEmpate, barraFora);
-
-        const stats = document.createElement('div');
-        stats.className = 'stats';
-
-        const statsCasa = document.createElement('span');
-        const statsEmpate = document.createElement('span');
-        const statsFora = document.createElement('span');
-        statsCasa.style.color = 'var(--green)';
-        statsFora.style.color = 'var(--orange)';
-        statsCasa.textContent = `${probCasa}% Casa`;
-        statsEmpate.textContent = `EMP ${probEmpate}%`;
-        statsFora.textContent = `${probFora}% Fora`;
-        stats.append(statsCasa, statsEmpate, statsFora);
-
-        const mercados = document.createElement('div');
-        mercados.className = 'market-grid';
-
-        const itensMercado = [
-          ['Média esperada de gols', `${lambdaCasa.toFixed(2)} x ${lambdaFora.toFixed(2)}`],
-          ['🤝 Ambas marcam', `${probAmbas}%`],
-          ['⚽ Over 2.5 gols', `${probOver25}%`],
-          ['📉 Under 2.5 gols', `${probUnder25}%`],
-        ];
-
-        itensMercado.forEach(([rotulo, valor]) => {
-          const item = document.createElement('div');
-          const spanRotulo = document.createElement('span');
-          const spanValor = document.createElement('span');
-
-          item.className = 'market-item';
-          spanRotulo.textContent = rotulo;
-          spanValor.textContent = valor;
-          item.append(spanRotulo, spanValor);
-          mercados.appendChild(item);
-        });
-
-        const sugestaoBloco = document.createElement('div');
-        const selo = document.createElement('div');
-        const forte = document.createElement('strong');
-        const odd = document.createElement('div');
-
-        sugestaoBloco.className = 'sugestao';
-        sugestaoBloco.style.background = isDiamante
-          ? 'rgba(255, 215, 0, 0.1)'
-          : 'rgba(0, 209, 178, 0.1)';
-        sugestaoBloco.style.border = isDiamante
-          ? '2px dashed var(--gold)'
-          : '1px dashed var(--primary)';
-        sugestaoBloco.style.color = isDiamante
-          ? 'var(--gold)'
-          : 'var(--primary)';
-
-        selo.style.fontSize = '0.8rem';
-        selo.style.marginBottom = '5px';
-        selo.style.opacity = '0.8';
-        selo.textContent = isDiamante
-          ? '💎 DICA DIAMANTE (alta confiança matemática)'
-          : '🎯 Sugestão do modelo Poisson';
-        forte.textContent = `${sugestao} (${probPrincipal}%)`;
-        odd.style.marginTop = '8px';
-        odd.style.color = '#ccc';
-        odd.style.fontSize = '0.85rem';
-        odd.textContent = `Odd justa estimada: ${oddJusta}`;
-
-        sugestaoBloco.append(selo, forte, document.createElement('br'), odd);
-
-        const botaoSalvar = document.createElement('button');
-        botaoSalvar.type = 'button';
-        botaoSalvar.className = 'btn-save';
-        botaoSalvar.textContent = '💾 Guardar no histórico';
-        botaoSalvar.addEventListener('click', () => {
-          salvarAposta({
-            casa: timeCasa,
-            fora: timeFora,
-            pCasa: probCasa,
-            pEmpate: probEmpate,
-            pFora: probFora,
-            sugestao,
-            idJogoAPI,
-            dataHoraReal,
-            botao: botaoSalvar,
-          });
-        });
-
-        painel.append(
-          base,
-          barraContainer,
-          stats,
-          mercados,
-          sugestaoBloco,
-          botaoSalvar,
-        );
-
-        painel.style.display = 'block';
-        botao.style.display = 'none';
-      } catch (erro) {
-        console.error('Erro ao analisar partida:', erro);
-
-        botao.disabled = false;
-        botao.textContent = '↻ Tentar analisar novamente';
-        botao.style.borderColor = 'var(--red)';
-        botao.style.color = 'var(--red)';
-
-        painel.innerHTML = '';
-        const mensagem = document.createElement('div');
-        mensagem.className = 'mensagem erro';
-
-        const titulo = document.createElement('strong');
-        const texto = document.createElement('p');
-        titulo.textContent = 'Análise indisponível';
-        texto.textContent = erro instanceof Error ? erro.message : String(erro);
-
-        mensagem.append(titulo, texto);
-        painel.appendChild(mensagem);
-        painel.style.display = 'block';
-      }
-    }
-
-    function poisson(k, lambda) {
-      return (Math.exp(-lambda) * Math.pow(lambda, k)) / fatorial(k);
-    }
-
-    function fatorial(n) {
-      if (n === 0 || n === 1) return 1;
-
-      let resultado = 1;
-      for (let i = 2; i <= n; i += 1) resultado *= i;
-      return resultado;
-    }
-
-    async function salvarAposta({
-      casa,
-      fora,
-      pCasa,
-      pEmpate,
-      pFora,
-      sugestao,
-      idJogoAPI,
-      dataHoraReal,
-      botao,
-    }) {
-      botao.disabled = true;
-      botao.textContent = 'A verificar...';
-
-      try {
-        const { data: jogoExistente, error: erroBusca } = await clienteSupabase
-          .from('partidas')
-          .select('id')
-          .eq('id_jogo_api', idJogoAPI)
-          .limit(1);
-
-        if (erroBusca) throw erroBusca;
-
-        if (jogoExistente?.length > 0) {
-          mostrarToast('Este jogo já está no histórico.', 'error');
-          botao.textContent = '⚠️ Já está no histórico';
-          botao.style.background = 'var(--orange)';
-          botao.style.color = '#121212';
-          return;
-        }
-
-        botao.textContent = 'A guardar...';
-
-        const { error: erroSalvar } = await clienteSupabase
-          .from('partidas')
-          .insert([
-            {
-              time_casa: casa,
-              time_fora: fora,
-              prob_vitoria_casa: pCasa,
-              prob_empate: pEmpate,
-              prob_vitoria_fora: pFora,
-              sugestao_aposta: sugestao,
-              id_jogo_api: idJogoAPI,
-              data_jogo: dataHoraReal,
-            },
-          ]);
-
-        if (erroSalvar) throw erroSalvar;
-
-        mostrarToast('Jogo salvo com sucesso! 🚀', 'success');
-        botao.textContent = 'Salvo com sucesso! ✅';
-        botao.style.background = 'var(--green)';
-        botao.style.color = '#121212';
-      } catch (erro) {
-        console.error('Erro ao salvar no Supabase:', erro);
-        mostrarToast('Erro ao salvar no Supabase.', 'error');
-        botao.textContent = 'Tentar guardar novamente';
-        botao.style.background = 'var(--red)';
-        botao.disabled = false;
-      }
-    }
-  </script>
+    </script>
 </body>
 </html>
