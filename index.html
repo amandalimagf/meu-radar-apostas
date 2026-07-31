@@ -170,9 +170,9 @@
         // --- NOVA FUNÇÃO PARA BUSCAR A DATA DO GITHUB ---
         async function buscarUltimaAtualizacao() {
             try {
-                // ATENÇÃO VICTOR: Troque 'SEU_USUARIO' e 'SEU_REPOSITORIO' pelos seus dados reais do GitHub
-                const githubUser = 'SEU_USUARIO';
-                const githubRepo = 'SEU_REPOSITORIO';
+                // Configuração com o seu usuário e repositório
+                const githubUser = 'amandalimagf';
+                const githubRepo = 'meu-radar-apostas';
                 
                 const res = await fetch(`https://api.github.com/repos/${githubUser}/${githubRepo}/commits?per_page=1`);
                 
@@ -209,7 +209,6 @@
         }
 
         async function buscarJogos() {
-            async function buscarJogos() {
             const btn = document.getElementById('btnEscanear');
             const divResultados = document.getElementById('listaResultados');
             const ligaId = document.getElementById('filtroLiga').value;
@@ -227,13 +226,13 @@
                 fimObj.setDate(fimObj.getDate() + 15);
                 const dataFim = fimObj.toISOString().split('T')[0];
 
-                // Para ligas brasileiras, a temporada atual é 2026. Europa pode ser 2025/2026.
+                // Testa a temporada atual (2026) e a anterior (2025)
                 let temporadasParaTestar = ['2026', '2025'];
                 
                 let jogosEncontrados = [];
                 let temporadaUsada = '';
 
-                // Usamos chamada direta para garantir a resposta imediata
+                // Usamos chamada direta com as datas respeitando o plano gratuito
                 for (let temp of temporadasParaTestar) {
                     const urlChamada = `https://v3.football.api-sports.io/fixtures?league=${ligaId}&season=${temp}&from=${dataInicio}&to=${dataFim}`;
                     
@@ -255,7 +254,7 @@
                     jogosEncontrados.forEach(jogo => renderizarCard(jogo, ligaId, temporadaUsada));
                     mostrarToast(`Jogos carregados com sucesso!`, 'success');
                 } else {
-                    divResultados.innerHTML = `<p style="text-align:center; padding: 20px; background: #252525; border-radius: 8px; color: var(--orange);">Nenhum jogo encontrado para esta liga nos próximos 15 dias.</p>`;
+                    divResultados.innerHTML = `<p style="text-align:center; padding: 20px; background: #252525; border-radius: 8px; color: var(--orange);">Nenhum jogo agendado para esta liga nos próximos 15 dias.</p>`;
                 }
 
             } catch (error) {
@@ -314,7 +313,7 @@
             botao.innerText = '⏳ A analisar Dados...';
 
             try {
-                // Para a análise de tabela usar sempre proxy ou chamada direta
+                // Para a análise de tabela usar a chamada direta
                 const res = await fetch(`https://v3.football.api-sports.io/standings?league=${ligaId}&season=${temporada}`, {
                     headers: headersAPI
                 });
