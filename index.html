@@ -209,58 +209,58 @@
         }
 
         async function buscarJogos() {
+            async function buscarJogos() {
             const btn = document.getElementById('btnEscanear');
             const divResultados = document.getElementById('listaResultados');
             const ligaId = document.getElementById('filtroLiga').value;
             
             btn.disabled = true;
             btn.innerText = 'A consultar API...';
-            
-            // Estilo de aviso para vermos exatamente o que a API responde
-            divResultados.innerHTML = `<p style="text-align:center; color: var(--gold);">A comunicar com os servidores (Modo Raio-X)...</p>`;
+            divResultados.innerHTML = '';
 
             try {
-                // Chamada SUPER DIRETA puxando os próximos 15 jogos (ignora datas)
-                const urlChamada = `https://v3.football.api-sports.io/fixtures?league=${ligaId}&next=15`;
+                // Montar a janela de datas: de Hoje até +15 dias
+                const hoje = new Date();
+                const dataInicio = hoje.toISOString().split('T')[0];
                 
-                const res = await fetch(urlChamada, { 
-                    method: 'GET', 
-                    headers: headersAPI
-                });
+                const fimObj = new Date(hoje);
+                fimObj.setDate(fimObj.getDate() + 15);
+                const dataFim = fimObj.toISOString().split('T')[0];
+
+                // Para ligas brasileiras, a temporada atual é 2026. Europa pode ser 2025/2026.
+                let temporadasParaTestar = ['2026', '2025'];
                 
-                const data = await res.json();
-                
-                // VERIFICAÇÃO DE ERROS DA API NA TELA
-                if (data.errors && Object.keys(data.errors).length > 0) {
-                    divResultados.innerHTML = `
-                        <div style="background: var(--red); padding: 15px; border-radius: 8px;">
-                            <strong>Erro da API:</strong><br>
-                            ${JSON.stringify(data.errors)}
-                        </div>`;
-                    return;
+                let jogosEncontrados = [];
+                let temporadaUsada = '';
+
+                // Usamos chamada direta para garantir a resposta imediata
+                for (let temp of temporadasParaTestar) {
+                    const urlChamada = `https://v3.football.api-sports.io/fixtures?league=${ligaId}&season=${temp}&from=${dataInicio}&to=${dataFim}`;
+                    
+                    const res = await fetch(urlChamada, { 
+                        method: 'GET', 
+                        headers: headersAPI 
+                    });
+                    
+                    const data = await res.json();
+                    
+                    if (data.response && data.response.length > 0) {
+                        jogosEncontrados = data.response;
+                        temporadaUsada = temp;
+                        break; // Se achou, para de testar outros anos
+                    }
                 }
 
-                if (data.response && data.response.length > 0) {
-                    divResultados.innerHTML = ''; // Limpa a mensagem
-                    data.response.forEach(jogo => renderizarCard(jogo, ligaId, jogo.league.season));
-                    mostrarToast(`Jogos carregados!`, 'success');
+                if (jogosEncontrados.length > 0) {
+                    jogosEncontrados.forEach(jogo => renderizarCard(jogo, ligaId, temporadaUsada));
+                    mostrarToast(`Jogos carregados com sucesso!`, 'success');
                 } else {
-                    // SE A API RESPONDER MAS ESTIVER VAZIA, MOSTRAMOS O QUE ELA LEU
-                    divResultados.innerHTML = `
-                        <div style="background: #333; padding: 15px; border-radius: 8px; border: 1px solid var(--orange);">
-                            <strong>A API respondeu, mas não encontrou jogos na fila.</strong><br><br>
-                            <span style="font-size: 0.8em; color: #aaa;">Parâmetros que a API leu:</span><br>
-                            ${JSON.stringify(data.parameters)}
-                        </div>`;
+                    divResultados.innerHTML = `<p style="text-align:center; padding: 20px; background: #252525; border-radius: 8px; color: var(--orange);">Nenhum jogo encontrado para esta liga nos próximos 15 dias.</p>`;
                 }
 
             } catch (error) {
-                divResultados.innerHTML = `
-                    <div style="background: #440000; color: #ff9999; padding: 15px; border-radius: 8px;">
-                        <strong>Erro de Conexão/Rede:</strong><br>
-                        ${error.message}<br><br>
-                        <small>Provável bloqueio de CORS do navegador. Suba para a Vercel para testar.</small>
-                    </div>`;
+                console.error(error);
+                divResultados.innerHTML = `<p style="color:var(--red); text-align:center;">Erro de ligação. Verifique a consola (F12).</p>`;
             } finally {
                 btn.disabled = false;
                 btn.innerText = 'Carregar Jogos da Liga';
