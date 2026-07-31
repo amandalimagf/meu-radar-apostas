@@ -167,10 +167,9 @@
             'x-rapidapi-key': API_KEY
         };
 
-        // --- NOVA FUNÇÃO PARA BUSCAR A DATA DO GITHUB ---
+        // --- FUNÇÃO PARA BUSCAR A DATA DO GITHUB ---
         async function buscarUltimaAtualizacao() {
             try {
-                // Configuração com o seu usuário e repositório
                 const githubUser = 'amandalimagf';
                 const githubRepo = 'meu-radar-apostas';
                 
@@ -218,12 +217,15 @@
             divResultados.innerHTML = '';
 
             try {
-                // Montar a janela de datas: de Hoje até +15 dias
+                // REDE AMPLIADA: 7 dias atrás até 30 dias para a frente
                 const hoje = new Date();
-                const dataInicio = hoje.toISOString().split('T')[0];
+                
+                const inicioObj = new Date(hoje);
+                inicioObj.setDate(inicioObj.getDate() - 7); 
+                const dataInicio = inicioObj.toISOString().split('T')[0];
                 
                 const fimObj = new Date(hoje);
-                fimObj.setDate(fimObj.getDate() + 15);
+                fimObj.setDate(fimObj.getDate() + 30); 
                 const dataFim = fimObj.toISOString().split('T')[0];
 
                 // Testa a temporada atual (2026) e a anterior (2025)
@@ -231,10 +233,11 @@
                 
                 let jogosEncontrados = [];
                 let temporadaUsada = '';
+                let debugUrl = '';
 
-                // Usamos chamada direta com as datas respeitando o plano gratuito
                 for (let temp of temporadasParaTestar) {
                     const urlChamada = `https://v3.football.api-sports.io/fixtures?league=${ligaId}&season=${temp}&from=${dataInicio}&to=${dataFim}`;
+                    debugUrl = urlChamada; // Guarda a URL testada para mostrar no erro
                     
                     const res = await fetch(urlChamada, { 
                         method: 'GET', 
@@ -246,7 +249,7 @@
                     if (data.response && data.response.length > 0) {
                         jogosEncontrados = data.response;
                         temporadaUsada = temp;
-                        break; // Se achou, para de testar outros anos
+                        break; 
                     }
                 }
 
@@ -254,7 +257,13 @@
                     jogosEncontrados.forEach(jogo => renderizarCard(jogo, ligaId, temporadaUsada));
                     mostrarToast(`Jogos carregados com sucesso!`, 'success');
                 } else {
-                    divResultados.innerHTML = `<p style="text-align:center; padding: 20px; background: #252525; border-radius: 8px; color: var(--orange);">Nenhum jogo agendado para esta liga nos próximos 15 dias.</p>`;
+                    // SE CONTINUAR VAZIO, MOSTRA UM RAIO-X COM A URL EXATA
+                    divResultados.innerHTML = `
+                        <div style="text-align:center; padding: 20px; background: #252525; border-radius: 8px; border: 1px dashed var(--orange);">
+                            <p style="color: var(--orange); font-weight: bold; margin-top: 0;">Nenhum jogo encontrado na janela de 37 dias.</p>
+                            <p style="font-size: 0.85em; color: #aaa;">Tentamos buscar de <strong>${dataInicio}</strong> até <strong>${dataFim}</strong>.</p>
+                            <p style="font-size: 0.75em; color: #777; word-break: break-all;">URL Consultada: ${debugUrl}</p>
+                        </div>`;
                 }
 
             } catch (error) {
