@@ -92,9 +92,9 @@
             </optgroup>
             
             <optgroup label="🇧🇷 Brasil">
-                <option value="71">Brasileirão - Série A</option>
+                <option value="71" selected>Brasileirão - Série A</option>
                 <option value="72">Brasileirão - Série B</option>
-                <option value="73" selected>Copa do Brasil</option>
+                <option value="73">Copa do Brasil</option>
             </optgroup>
 
             <optgroup label="🏴󠁧󠁢󠁥󠁮󠁧󠁿 Inglaterra">
@@ -211,31 +211,51 @@
             const ligaId = document.getElementById('filtroLiga').value;
             
             btn.disabled = true;
-            btn.innerText = 'A processar temporadas...';
+            btn.innerText = 'A processar dados...';
             divResultados.innerHTML = '';
 
             try {
                 const anoAtual = new Date().getFullYear();
-                const anosParaTestar = [anoAtual, anoAtual - 1]; // Tenta 2026, se falhar tenta 2025
+                const anosParaTestar = [anoAtual, anoAtual - 1]; 
                 
                 let todosOsJogos = [];
                 let temporadaEncontrada = '';
+                let erroIdentificado = null;
 
-                // O Arrastão Duplo:
                 for (let ano of anosParaTestar) {
                     const urlChamada = `https://v3.football.api-sports.io/fixtures?league=${ligaId}&season=${ano}`;
                     const res = await fetch(urlChamada, { method: 'GET', headers: headersAPI });
                     const data = await res.json();
                     
+                    // NOVA VERIFICAÇÃO: Capturar bloqueios da API (Limite diário, etc)
+                    if (data.errors && Object.keys(data.errors).length > 0) {
+                        erroIdentificado = data.errors;
+                        break; // Se deu erro de limite ou bloqueio, para imediatamente.
+                    }
+
                     if (data.response && data.response.length > 0) {
                         todosOsJogos = data.response;
                         temporadaEncontrada = ano;
-                        break; // Achou jogos, para de procurar em anos antigos
+                        break; 
                     }
                 }
                 
+                // Se a API mandou uma mensagem de erro oficial (Bloqueio)
+                if (erroIdentificado) {
+                    divResultados.innerHTML = `
+                        <div style="text-align:center; padding: 20px; background: var(--red); border-radius: 8px; color: white;">
+                            <strong style="font-size: 1.2em;">⚠️ Bloqueio da API Identificado</strong><br><br>
+                            A API-Football recusou o nosso pedido pelo seguinte motivo:<br>
+                            <span style="font-family: monospace; background: #000; padding: 10px; display: inline-block; margin-top: 10px; border-radius: 5px;">
+                                ${JSON.stringify(erroIdentificado)}
+                            </span><br><br>
+                            <small>Nota: Se for "requests", você atingiu as 100 requisições diárias do plano gratuito. O limite reseta à meia-noite.</small>
+                        </div>`;
+                    return; // Encerra a função aqui
+                }
+
                 if (todosOsJogos.length > 0) {
-                    const limiteTempo = new Date().getTime() - (24 * 60 * 60 * 1000); // Ontem
+                    const limiteTempo = new Date().getTime() - (24 * 60 * 60 * 1000); 
                     
                     const proximosJogos = todosOsJogos
                         .filter(jogo => new Date(jogo.fixture.date).getTime() >= limiteTempo)
@@ -256,13 +276,13 @@
                     divResultados.innerHTML = `
                         <div style="text-align:center; padding: 20px; background: #252525; border-radius: 8px; border: 1px dashed var(--red);">
                             <p style="color: var(--red); font-weight: bold; margin-top: 0;">Liga sem dados na API no momento!</p>
-                            <p style="font-size: 0.85em; color: #aaa;">Tentamos puxar os anos de ${anosParaTestar[0]} e ${anosParaTestar[1]}, mas os servidores retornaram vazio para esta competição.</p>
+                            <p style="font-size: 0.85em; color: #aaa;">A API não devolveu jogos para os anos ${anosParaTestar[0]} e ${anosParaTestar[1]}.</p>
                         </div>`;
                 }
 
             } catch (error) {
                 console.error(error);
-                divResultados.innerHTML = `<p style="color:var(--red); text-align:center;">Erro de rede ou bloqueio de CORS.</p>`;
+                divResultados.innerHTML = `<p style="color:var(--red); text-align:center;">Erro de rede ou bloqueio de CORS. A API não respondeu.</p>`;
             } finally {
                 btn.disabled = false;
                 btn.innerText = 'Carregar Jogos da Liga';
