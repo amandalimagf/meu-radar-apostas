@@ -167,7 +167,6 @@
             'x-rapidapi-key': API_KEY
         };
 
-        // --- FUNÇÃO PARA BUSCAR A DATA DO GITHUB ---
         async function buscarUltimaAtualizacao() {
             try {
                 const githubUser = 'amandalimagf';
@@ -175,7 +174,7 @@
                 
                 const res = await fetch(`https://api.github.com/repos/${githubUser}/${githubRepo}/commits?per_page=1`);
                 
-                if (!res.ok) throw new Error("Repositório não encontrado ou limite excedido");
+                if (!res.ok) throw new Error("Repositório não encontrado");
                 
                 const dados = await res.json();
                 
@@ -186,11 +185,10 @@
                     document.getElementById('data-atualizacao').innerText = `${formatada} às ${horaFormatada}`;
                 }
             } catch (error) {
-                document.getElementById('data-atualizacao').innerText = 'Data indisponível no momento';
+                document.getElementById('data-atualizacao').innerText = 'Data indisponível';
             }
         }
         buscarUltimaAtualizacao();
-        // ------------------------------------------------
 
         function mostrarToast(mensagem, tipo = 'info') {
             const container = document.getElementById('toast-container');
@@ -213,54 +211,58 @@
             const ligaId = document.getElementById('filtroLiga').value;
             
             btn.disabled = true;
-            btn.innerText = 'A puxar temporada completa...';
+            btn.innerText = 'A processar temporadas...';
             divResultados.innerHTML = '';
 
             try {
-                // Tática do Arrastão: Pede a temporada de 2026 INTEIRA, ignorando filtros de data da API.
                 const anoAtual = new Date().getFullYear();
-                const urlChamada = `https://v3.football.api-sports.io/fixtures?league=${ligaId}&season=${anoAtual}`;
+                const anosParaTestar = [anoAtual, anoAtual - 1]; // Tenta 2026, se falhar tenta 2025
                 
-                const res = await fetch(urlChamada, { 
-                    method: 'GET', 
-                    headers: headersAPI 
-                });
-                
-                const data = await res.json();
-                
-                if (data.response && data.response.length > 0) {
-                    // Pegar a hora de "ontem" para garantir que jogos de hoje cedo apareçam
-                    const limiteTempo = new Date().getTime() - (24 * 60 * 60 * 1000);
+                let todosOsJogos = [];
+                let temporadaEncontrada = '';
+
+                // O Arrastão Duplo:
+                for (let ano of anosParaTestar) {
+                    const urlChamada = `https://v3.football.api-sports.io/fixtures?league=${ligaId}&season=${ano}`;
+                    const res = await fetch(urlChamada, { method: 'GET', headers: headersAPI });
+                    const data = await res.json();
                     
-                    // Nosso JavaScript filtra os jogos que ainda vão acontecer e ordena pela data mais antiga para a mais distante
-                    const proximosJogos = data.response
+                    if (data.response && data.response.length > 0) {
+                        todosOsJogos = data.response;
+                        temporadaEncontrada = ano;
+                        break; // Achou jogos, para de procurar em anos antigos
+                    }
+                }
+                
+                if (todosOsJogos.length > 0) {
+                    const limiteTempo = new Date().getTime() - (24 * 60 * 60 * 1000); // Ontem
+                    
+                    const proximosJogos = todosOsJogos
                         .filter(jogo => new Date(jogo.fixture.date).getTime() >= limiteTempo)
                         .sort((a, b) => new Date(a.fixture.date) - new Date(b.fixture.date))
-                        .slice(0, 15); // Corta para mostrar apenas os próximos 15
+                        .slice(0, 15);
 
                     if (proximosJogos.length > 0) {
-                        proximosJogos.forEach(jogo => renderizarCard(jogo, ligaId, anoAtual));
+                        proximosJogos.forEach(jogo => renderizarCard(jogo, ligaId, temporadaEncontrada));
                         mostrarToast(`Jogos carregados com sucesso!`, 'success');
                     } else {
-                        // Se a API tem jogos em 2026, mas o nosso filtro não achou nenhum no futuro:
                         divResultados.innerHTML = `
                             <div style="text-align:center; padding: 20px; background: #252525; border-radius: 8px; border: 1px dashed var(--orange);">
-                                <p style="color: var(--orange); font-weight: bold; margin-top: 0;">A API tem os dados de 2026, mas nenhum jogo futuro agendado.</p>
-                                <p style="font-size: 0.85em; color: #aaa;">Os servidores deles ainda não cadastraram a próxima fase desta liga.</p>
+                                <p style="color: var(--orange); font-weight: bold; margin-top: 0;">Dados carregados, mas sem jogos futuros.</p>
+                                <p style="font-size: 0.85em; color: #aaa;">A API tem dados desta liga para a temporada ${temporadaEncontrada}, mas não há nenhum confronto agendado a partir de hoje.</p>
                             </div>`;
                     }
                 } else {
-                    // Se a API retornar VAZIO para a temporada de 2026 inteira:
                     divResultados.innerHTML = `
                         <div style="text-align:center; padding: 20px; background: #252525; border-radius: 8px; border: 1px dashed var(--red);">
-                            <p style="color: var(--red); font-weight: bold; margin-top: 0;">Confirmado: O calendário da API está quebrado!</p>
-                            <p style="font-size: 0.85em; color: #aaa;">Pedimos todos os jogos de 2026 e eles devolveram zero resultados para esta liga. A API precisa ser atualizada por eles.</p>
+                            <p style="color: var(--red); font-weight: bold; margin-top: 0;">Liga sem dados na API no momento!</p>
+                            <p style="font-size: 0.85em; color: #aaa;">Tentamos puxar os anos de ${anosParaTestar[0]} e ${anosParaTestar[1]}, mas os servidores retornaram vazio para esta competição.</p>
                         </div>`;
                 }
 
             } catch (error) {
                 console.error(error);
-                divResultados.innerHTML = `<p style="color:var(--red); text-align:center;">Erro de ligação. Verifique a consola (F12).</p>`;
+                divResultados.innerHTML = `<p style="color:var(--red); text-align:center;">Erro de rede ou bloqueio de CORS.</p>`;
             } finally {
                 btn.disabled = false;
                 btn.innerText = 'Carregar Jogos da Liga';
@@ -314,7 +316,6 @@
             botao.innerText = '⏳ A analisar Dados...';
 
             try {
-                // Para a análise de tabela usar a chamada direta
                 const res = await fetch(`https://v3.football.api-sports.io/standings?league=${ligaId}&season=${temporada}`, {
                     headers: headersAPI
                 });
